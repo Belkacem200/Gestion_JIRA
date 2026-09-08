@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Qualité des tickets — {{ title }}</title>
+  <style>
+    :root {
+      --blue:#003B7A; --blue2:#0a5bb5; --bg:#f4f7fb; --card:#fff;
+      --red:#c0392b; --orange:#e67e22; --green:#27ae60; --grey:#667; --line:#e2e8f0;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:#1a2233; }
+    header {
+      background:linear-gradient(120deg,var(--blue),var(--blue2)); color:#fff;
+      padding:16px 28px; display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 2px 10px rgba(0,0,0,.15); position:sticky; top:0; z-index:20; flex-wrap:wrap; gap:10px;
+    }
+    header h1 { margin:0; font-size:19px; font-weight:600; }
+    header .sub { font-size:12px; opacity:.85; margin-top:2px; }
+    .controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .btn { background:#fff; color:var(--blue); font-weight:600; padding:9px 16px; cursor:pointer;
+      border:none; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.12); font-size:14px; text-decoration:none; }
+    .btn:hover { transform:translateY(-1px); }
+    .btn.ghost { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.5); box-shadow:none; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    main { padding:22px 28px; max-width:1300px; margin:0 auto; }
+    .status { font-size:13px; min-height:20px; margin:0 0 14px; }
+    .spinner { display:inline-block; width:14px; height:14px; border:2px solid #ccc;
+      border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    /* cartes filtres */
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:8px; }
+    .qc { background:var(--card); border-radius:10px; padding:12px 14px; cursor:pointer; border:2px solid transparent;
+      box-shadow:0 1px 4px rgba(0,0,0,.06); transition:.12s; }
+    .qc:hover { transform:translateY(-2px); }
+    .qc.active { border-color:var(--blue); box-shadow:0 3px 10px rgba(10,91,181,.25); }
+    .qc .n { font-size:24px; font-weight:700; }
+    .qc .t { font-size:12px; color:var(--grey); margin-top:2px; display:flex; align-items:center; gap:6px; }
+    .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+    .toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:14px 0; }
+    .toolbar input[type=text] { padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px; width:240px; }
+    .toolbar label { font-size:13px; color:var(--grey); display:flex; align-items:center; gap:6px; }
+    .toolbar select { padding:7px 10px; border:1px solid var(--line); border-radius:8px; }
+    .summary { font-size:13px; color:var(--grey); margin-left:auto; }
+    .people-toolbar { margin-top:-4px; padding:10px 12px; background:#eef3fa; border-radius:10px; }
+    .people-toolbar label { font-weight:600; color:var(--blue); }
+    .people-toolbar select { min-width:150px; max-width:230px; font-size:13px; background:#fff; }
+    /* multi-select (personne assignee) */
+    .ms { position:relative; display:inline-flex; align-items:center; gap:6px; font-weight:600; color:var(--blue); font-size:13px; }
+    .ms-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border:1px solid var(--line);
+      border-radius:8px; background:#fff; cursor:pointer; font-size:13px; color:var(--blue); font-weight:600;
+      min-width:190px; justify-content:space-between; }
+    .ms-btn:hover { border-color:var(--blue2); }
+    .ms-btn .cnt { background:var(--blue); color:#fff; border-radius:10px; padding:0 7px; font-size:11px; }
+    .ms-panel { display:none; position:absolute; top:110%; left:0; z-index:40; width:270px; background:#fff;
+      border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 26px rgba(0,0,0,.2); padding:8px; }
+    .ms-panel.open { display:block; }
+    .ms-search { width:100%; padding:7px 10px; border:1px solid var(--line); border-radius:7px; font-size:13px; margin-bottom:6px; }
+    .ms-actions { display:flex; gap:8px; font-size:12px; margin:0 2px 6px; }
+    .ms-actions a { color:var(--blue2); text-decoration:none; font-weight:600; cursor:pointer; }
+    .ms-list { max-height:230px; overflow:auto; }
+    .ms-opt { display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:6px; cursor:pointer; font-weight:500; color:#1a2233; }
+    .ms-opt:hover { background:#eef3fa; }
+    .ms-opt input { cursor:pointer; }
+    .ms-opt.hidden { display:none; }
+    table { width:100%; border-collapse:collapse; font-size:13px; background:var(--card); border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+    th { text-align:left; background:#eef3fa; color:var(--blue); padding:9px 10px; cursor:pointer; white-space:nowrap; }
+    th.sortable::after { content:' ⇅'; opacity:.4; font-size:11px; }
+    th.asc::after { content:' ↑'; opacity:1; }
+    th.desc::after { content:' ↓'; opacity:1; }
+    td { padding:8px 10px; border-top:1px solid var(--line); vertical-align:top; }
+    tr:hover td { background:#f8fafd; }
+    a.key { color:var(--blue2); font-weight:600; text-decoration:none; white-space:nowrap; }
+    .badge { display:inline-block; padding:2px 7px; border-radius:10px; font-size:10.5px; font-weight:600; color:#fff; margin:1px 2px 1px 0; white-space:nowrap; }
+    .pill-status { padding:2px 8px; border-radius:10px; font-size:11px; background:#eef; color:#334; white-space:nowrap; }
+    .idle-high { color:var(--red); font-weight:700; }
+    .idle-mid { color:var(--orange); font-weight:600; }
+    .muted { color:var(--grey); }
+    .empty { text-align:center; padding:60px 20px; color:var(--grey); }
+    .flagcount { display:inline-block; min-width:22px; text-align:center; background:var(--red); color:#fff; border-radius:11px; padding:1px 7px; font-weight:700; font-size:12px; }
+    /* menu export */
+    .menu { position:relative; display:inline-block; }
+    .menu-items { display:none; position:absolute; right:0; top:110%; background:#fff; border-radius:8px;
+      box-shadow:0 6px 20px rgba(0,0,0,.2); overflow:hidden; z-index:30; min-width:170px; }
+    .menu-items.open { display:block; }
+    .menu-items a { display:block; padding:10px 14px; color:#1a2233; text-decoration:none; font-size:14px; }
+    .menu-items a:hover { background:#eef3fa; }
+    /* dropdown parents */
+    details.parents summary { cursor:pointer; display:inline-block; padding:3px 10px;
+      border-radius:14px; background:#e8f0fb; color:var(--blue); font-weight:700;
+      font-size:11.5px; border:1px solid #c4dbf5; white-space:nowrap; user-select:none;
+      list-style:none; transition:.12s; }
+    details.parents summary:hover { background:#d3e4f9; box-shadow:0 1px 4px rgba(10,91,181,.25); }
+    details.parents summary::-webkit-details-marker { display:none; }
+    details.parents summary::before { content:'▸ '; }
+    details.parents[open] summary { background:var(--blue); color:#fff; border-color:var(--blue); }
+    details.parents[open] summary::before { content:'▾ '; }
+    details.parents ul { margin:6px 0 2px; padding-left:16px; }
+    details.parents li { margin:2px 0; font-size:12px; }
+    details.parents a { color:var(--blue2); text-decoration:none; font-weight:600; }
+    details.parents .tgrp { margin:6px 0; padding:6px 8px; background:#f6f9fd; border-radius:6px; }
+    details.parents .tlbl { font-size:11px; font-weight:700; display:block; margin-bottom:2px; }
+    details.parents .tlbl.up { color:#2c3e50; }
+    details.parents .tlbl.dn { color:#6c5ce7; }
+    /* badge cliquable (personnes) */
+    .badge.clickable { cursor:pointer; }
+    .badge.clickable::after { content:' 🔍'; font-size:9px; opacity:.85; }
+    .badge.clickable:hover { filter:brightness(1.12); box-shadow:0 1px 4px rgba(0,0,0,.3); }
+    /* popup personnes */
+    .modal-ov { display:none; position:fixed; inset:0; background:rgba(15,25,45,.55);
+      z-index:100; align-items:center; justify-content:center; padding:20px; }
+    .modal-ov.open { display:flex; }
+    .modal { background:#fff; border-radius:14px; max-width:640px; width:100%; max-height:85vh;
+      overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.35); animation:pop .16s ease; }
+    @keyframes pop { from { transform:scale(.94); opacity:.4; } to { transform:scale(1); opacity:1; } }
+    .modal header { background:linear-gradient(120deg,var(--blue),var(--blue2)); color:#fff;
+      padding:14px 20px; position:static; box-shadow:none; display:block; }
+    .modal header .mkey { font-size:15px; font-weight:700; }
+    .modal header .msum { font-size:12.5px; opacity:.9; margin-top:3px; }
+    .modal header .mkey a { color:#fff; text-decoration:underline; }
+    .modal .mbody { padding:18px 20px; }
+    .pv-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media(max-width:560px){ .pv-grid { grid-template-columns:1fr; } }
+    .pv-col { border-radius:10px; padding:12px 14px; border:1px solid var(--line); }
+    .pv-col.ok { background:#eafaf0; border-color:#bfe8cf; }
+    .pv-col.ko { background:#fdecea; border-color:#f5c6c0; }
+    .pv-col h4 { margin:0 0 8px; font-size:13px; }
+    .pv-col.ok h4 { color:#1e7e46; }
+    .pv-col.ko h4 { color:#b02a1e; }
+    .pv-col ul { margin:0; padding:0; list-style:none; }
+    .pv-col li { font-size:12.5px; padding:4px 0; display:flex; gap:7px; align-items:flex-start; }
+    .pv-col li .ic { flex:0 0 auto; }
+    .pv-col .none { font-size:12px; color:var(--grey); font-style:italic; }
+    .pv-tag { font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--grey);
+      font-weight:700; display:block; }
+    .modal .mfoot { padding:0 20px 18px; text-align:right; }
+    .modal .mclose { background:var(--blue); color:#fff; border:none; border-radius:8px;
+      padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer; }
+    .modal .mclose:hover { background:var(--blue2); }
+    .dup-list { margin:0; padding:0; list-style:none; }
+    .dup-list li { padding:6px 8px; border-radius:6px; font-size:13px; }
+    .dup-list li:hover { background:#eef3fa; }
+    .dup-list a { color:var(--blue2); font-weight:700; text-decoration:none; }
+    .dup-list a:hover { text-decoration:underline; }
+    .dup-list .none { color:var(--grey); font-style:italic; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=3">
+</head>
+<body>
+  <header>
+    <div class="head-left">
+      <a class="brand" href="/" aria-label="Bouygues Telecom — accueil">
+        <span class="bt-word">
+          <span class="bt-word-b">bouygues</span>
+          <span class="bt-word-t">telecom</span>
+        </span>
+        <svg class="bt-mark" viewBox="0 0 100 100" role="img" aria-label="Bouygues Telecom">
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#4fb4e6" transform="rotate(0 50 50)"/>
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#ee7c00" transform="rotate(120 50 50)"/>
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#003a87" transform="rotate(240 50 50)"/>
+        </svg>
+      </a>
+      <span class="head-div"></span>
+      <div class="head-title">
+        <h1>Qualité &amp; hygiène des tickets</h1>
+        <div class="sub" id="genAt">—</div>
+      </div>
+    </div>
+    <div class="controls">
+      <label style="color:#fff;font-size:13px;">Inactivité ≥
+        <select id="staleDays">
+          <option value="7">7 j</option>
+          <option value="14">14 j</option>
+          <option value="30" selected>30 j</option>
+          <option value="60">60 j</option>
+          <option value="90">90 j</option>
+        </select>
+      </label>
+      <label style="color:#fff;font-size:13px;"><input type="checkbox" id="incDone" /> Inclure terminés</label>
+      <button class="btn" id="refreshBtn" title="Recharge les tickets depuis JIRA (récupère les dernières modifications : statuts, échéances...)">Rafraîchir</button>
+      <div class="menu">
+        <button class="btn" id="exportBtn">Exporter ▾</button>
+        <div class="menu-items" id="exportMenu">
+          <a href="#" data-fmt="pdf">📄 PDF</a>
+          <a href="#" data-fmt="pptx">📊 PowerPoint</a>
+          <a href="#" data-fmt="html">🌐 HTML</a>
+          <a href="#" data-fmt="xlsx">📗 Excel (xlsx)</a>
+          <a href="#" data-fmt="csv">📑 CSV</a>
+        </div>
+      </div>
+      <a class="btn ghost" href="/roadmap">Roadmap</a>
+      <a class="btn ghost" href="/actualite">Actualité</a>
+      <a class="btn ghost" href="/">← Tableau de bord</a>
+    </div>
+  </header>
+
+  <main>
+    <p class="status" id="status"></p>
+
+    <div id="content">
+      <div class="empty" id="empty">
+        <p style="font-size:40px;margin:0;">🔍</p>
+        <p>Aucune donnée chargée.<br/>Cliquez sur <b>« Rafraîchir »</b> pour analyser la qualité des tickets JIRA.</p>
+      </div>
+
+      <div id="dash" style="display:none;">
+        <div class="cards" id="cards"></div>
+
+        <div class="toolbar">
+          <input type="text" id="search" placeholder="🔎 Rechercher (clé, sujet, personne)..." />
+          <label>Mode filtres :
+            <select id="mode">
+              <option value="or">au moins un défaut sélectionné</option>
+              <option value="and">tous les défauts sélectionnés</option>
+            </select>
+          </label>
+          <button class="btn" id="clearFilters" style="padding:7px 12px;">Réinitialiser</button>
+          <span class="summary" id="summary"></span>
+        </div>
+
+        <div class="toolbar people-toolbar">
+          <div class="ms" id="msAssignee">
+            <span>👤 Personne assignée :</span>
+            <button type="button" class="ms-btn" id="msAssigneeBtn">
+              <span id="msAssigneeLbl">Toutes</span> <span>▾</span>
+            </button>
+            <div class="ms-panel" id="msAssigneePanel">
+              <input type="text" class="ms-search" id="msAssigneeSearch" placeholder="🔎 Filtrer les personnes..." />
+              <div class="ms-actions">
+                <a id="msAssigneeAll">Tout cocher</a>
+                <a id="msAssigneeNone">Tout décocher</a>
+              </div>
+              <div class="ms-list" id="msAssigneeList"></div>
+            </div>
+          </div>
+          <label>🧑‍💼 Demandeur :
+            <select id="fCreator"><option value="">Tous</option></select>
+          </label>
+          <label>📣 Rapporteur :
+            <select id="fReporter"><option value="">Tous</option></select>
+          </label>
+          <label>👥 Participant :
+            <select id="fParticipant"><option value="">Tous</option></select>
+          </label>
+        </div>
+
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="flag_count">Défauts</th>
+              <th data-sort="key">Ticket</th>
+              <th>Sujet</th>
+              <th data-sort="assignee">Assigné</th>
+              <th data-sort="status">État</th>
+              <th class="sortable desc" data-sort="days_idle">Inactif (j)</th>
+              <th>Arborescence</th>
+              <th>Contrôles échoués</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Popup personnes : présent vs manquant -->
+  <div class="modal-ov" id="peopleModal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <header>
+        <div class="mkey" id="pmKey">—</div>
+        <div class="msum" id="pmSum"></div>
+      </header>
+      <div class="mbody">
+        <div class="pv-grid">
+          <div class="pv-col ok">
+            <h4>✅ Informations présentes</h4>
+            <ul id="pmOk"></ul>
+          </div>
+          <div class="pv-col ko">
+            <h4>❌ Informations manquantes</h4>
+            <ul id="pmKo"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button class="mclose" id="pmClose">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup doublons : tickets partageant le même intitulé -->
+  <div class="modal-ov" id="dupModal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <header>
+        <div class="mkey" id="dupKey">—</div>
+        <div class="msum" id="dupSum"></div>
+      </header>
+      <div class="mbody">
+        <div style="font-size:13px;color:var(--grey);margin-bottom:8px;">
+          Ce ticket porte le même intitulé que&nbsp;:
+        </div>
+        <ul class="dup-list" id="dupList"></ul>
+      </div>
+      <div class="mfoot">
+        <button class="mclose" id="dupClose">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = s => document.querySelector(s);
+let DATA = null;
+let activeFilters = new Set();
+let selAssignees = new Set();   // personnes assignées sélectionnées (multi)
+let sortKey = 'days_idle', sortDir = -1;
+
+// Libellés explicites (tooltips au survol des badges)
+const CHECK_DESC = {
+  no_description: "Le ticket n'a aucune description renseignée",
+  no_priority:    "Aucune priorité définie sur le ticket",
+  no_assignee:    "Aucun responsable (personne assignée) — cliquer pour le détail",
+  no_participant: "Aucun participant à la requête (personne assignée à la demande) — cliquer pour le détail",
+  assignee_not_participant: "Le responsable ne figure pas dans les participants à la requête — cliquer pour le détail",
+  no_reporter:    "Aucun rapporteur renseigné",
+  no_creator:     "Aucun demandeur (créateur) renseigné",
+  no_comment:     "Le ticket n'a aucun commentaire",
+  no_parent:      "Le ticket n'est rattaché à aucun parent / épic",
+  epic_no_child:  "Cet épic ne regroupe aucun ticket enfant",
+  duplicate:      "Même intitulé qu'un autre ticket — cliquer pour voir le(s) doublon(s)",
+  stale:          "Le ticket ouvert n'a pas été mis à jour récemment",
+  status_stale:   "Marqué « en cours » mais figé depuis longtemps",
+  no_due:         "Aucune date d'échéance définie",
+  overdue:        "L'échéance du ticket est dépassée",
+};
+
+// Contrôles liés aux personnes : badge cliquable -> popup présent/manquant
+const PEOPLE_CHECKS = new Set(['no_assignee','no_participant','assignee_not_participant']);
+
+function setStatus(t, spin){ $('#status').innerHTML = (spin?'<span class="spinner"></span> ':'')+(t||''); }
+
+async function refresh(opts){
+  const reload = !!(opts && opts.reload);
+  const btn = $('#refreshBtn'); btn.disabled = true;
+  setStatus(reload ? 'Extraction JIRA en cours (récupération des dernières modifications)...'
+                   : 'Analyse de la qualité...', true);
+  const stale = $('#staleDays').value;
+  const inc = $('#incDone').checked ? 1 : 0;
+  try {
+    const url = `/api/quality?stale_days=${stale}&include_done=${inc}&reload=${reload?1:0}`;
+    const j = await (await fetch(url)).json();
+    if(!j.ok){
+      setStatus('⚠️ ' + (j.error||'Erreur') + ' — générez d\'abord un rapport sur le tableau de bord.');
+      btn.disabled=false; return;
+    }
+    DATA = j.data; render();
+    setStatus((reload?'🔄 Données JIRA rafraîchies — ':'✅ Analysé — ') + DATA.generated_at);
+  } catch(e){ setStatus('❌ ' + e.message); }
+  btn.disabled=false;
+}
+
+function render(){
+  $('#empty').style.display='none';
+  $('#dash').style.display='block';
+  $('#genAt').textContent = `${DATA.total} tickets analysés — ${DATA.with_defects} avec défaut(s), ${DATA.clean} conformes`;
+
+  // Cartes de contrôle (filtres)
+  $('#cards').innerHTML = Object.entries(DATA.checks).map(([code,c])=>`
+    <div class="qc ${activeFilters.has(code)?'active':''}" data-code="${code}">
+      <div class="n" style="color:${c.color}">${c.count}</div>
+      <div class="t"><span class="dot" style="background:${c.color}"></span>${c.label}</div>
+    </div>`).join('');
+  document.querySelectorAll('.qc').forEach(el=>el.addEventListener('click',()=>{
+    const code = el.dataset.code;
+    if(activeFilters.has(code)) activeFilters.delete(code); else activeFilters.add(code);
+    render();
+  }));
+
+  populatePeopleFilters();
+  renderRows();
+}
+
+// Remplit les listes deroulantes de filtres par personne (valeurs uniques triees)
+function populatePeopleFilters(){
+  const escAttr = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const assignees=new Set(), creators=new Set(), reporters=new Set(), participants=new Set();
+  DATA.issues.forEach(r=>{
+    if(r.assignee) assignees.add(r.assignee);
+    if(r.creator) creators.add(r.creator);
+    if(r.reporter) reporters.add(r.reporter);
+    (r.participants||[]).forEach(p=>{ if(p) participants.add(p); });
+  });
+  const srt = s => Array.from(s).sort((a,b)=>a.localeCompare(b,'fr'));
+  const fill = (sel, values) => {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Tous</option>' +
+      values.map(v=>`<option value="${escAttr(v)}">${escHtml(v)}</option>`).join('');
+    sel.value = values.includes(cur) ? cur : '';
+  };
+  buildAssigneeMS(srt(assignees));
+  fill($('#fCreator'), srt(creators));
+  fill($('#fReporter'), srt(reporters));
+  fill($('#fParticipant'), srt(participants));
+}
+
+// Construit la liste à cocher "Personne assignée" (multi-sélection)
+function buildAssigneeMS(values){
+  // ne garde que les personnes encore présentes dans les données
+  selAssignees = new Set([...selAssignees].filter(v=>values.includes(v)));
+  $('#msAssigneeList').innerHTML = values.map(v=>`
+    <label class="ms-opt"><input type="checkbox" value="${escHtml(v).replace(/"/g,'&quot;')}"
+      ${selAssignees.has(v)?'checked':''}> <span>${escHtml(v)}</span></label>`).join('')
+    || '<div class="muted" style="padding:6px">Aucune personne</div>';
+  document.querySelectorAll('#msAssigneeList input').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(cb.checked) selAssignees.add(cb.value); else selAssignees.delete(cb.value);
+    updateAssigneeLabel(); renderRows();
+  }));
+  updateAssigneeLabel();
+}
+
+function updateAssigneeLabel(){
+  const n = selAssignees.size;
+  const lbl = $('#msAssigneeLbl');
+  if(n===0) lbl.textContent = 'Toutes';
+  else if(n===1) lbl.textContent = [...selAssignees][0];
+  else lbl.innerHTML = `<span class="cnt">${n}</span> sélectionnées`;
+}
+
+function renderRows(){
+  const q = ($('#search').value||'').toLowerCase();
+  const mode = $('#mode').value;
+  const checks = DATA.checks;
+  const fC = $('#fCreator').value, fR = $('#fReporter').value, fP = $('#fParticipant').value;
+
+  let rows = DATA.issues.filter(r=>{
+    if(activeFilters.size){
+      if(mode==='and'){ for(const f of activeFilters) if(!r.flags.includes(f)) return false; }
+      else { if(!r.flags.some(f=>activeFilters.has(f))) return false; }
+    }
+    if(selAssignees.size && !selAssignees.has(r.assignee)) return false;
+    if(fC && r.creator!==fC) return false;
+    if(fR && r.reporter!==fR) return false;
+    if(fP && !((r.participants||[]).includes(fP))) return false;
+    if(q){
+      const hay = (r.key+' '+r.summary+' '+r.assignee+' '+r.reporter+' '+r.creator+' '+(r.participants||[]).join(' ')).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  rows.sort((a,b)=>{
+    let va=a[sortKey], vb=b[sortKey];
+    if(typeof va==='string'){ va=va.toLowerCase(); vb=(vb||'').toLowerCase(); return va<vb?-sortDir:va>vb?sortDir:0; }
+    return (va-vb)*sortDir;
+  });
+
+  $('#summary').textContent = `${rows.length} ticket(s) affiché(s)`;
+
+  $('#tbody').innerHTML = rows.map(r=>{
+    const badges = r.flags.map(f=>{
+      const label = (f==='stale')
+        ? `Non mis à jour depuis ${r.days_idle>=0?r.days_idle+' j':'?'}`
+        : (f==='overdue')
+        ? `Échéance dépassée${r.days_overdue>0?' depuis '+r.days_overdue+' j':''}`
+        : checks[f].label;
+      const tip = CHECK_DESC[f] || checks[f].label;
+      if(PEOPLE_CHECKS.has(f)){
+        return `<span class="badge clickable" style="background:${checks[f].color}" title="${tip}" onclick="showPeople('${r.key}')">${label}</span>`;
+      }
+      if(f==='duplicate'){
+        return `<span class="badge clickable" style="background:${checks[f].color}" title="${tip}" onclick="showDuplicates('${r.key}')">${label}</span>`;
+      }
+      return `<span class="badge" style="background:${checks[f].color}" title="${tip}">${label}</span>`;
+    }).join('');
+    const idleCls = r.days_idle>=90?'idle-high':(r.days_idle>=30?'idle-mid':'');
+    const idleTxt = r.days_idle<0?'—':r.days_idle;
+    const parents = (r.parents||[]);
+    const children = (r.children||[]);
+    let treeCell;
+    if(parents.length || children.length){
+      const li = a => `<li><a href="${a.url}" target="_blank">${a.key}</a>${a.summary?' — '+a.summary.replace(/</g,'&lt;'):''}</li>`;
+      let inner = '';
+      if(parents.length) inner += `<div class="tgrp"><span class="tlbl up">↑ ${parents.length} parent${parents.length>1?'s':''}</span><ul>${parents.map(li).join('')}</ul></div>`;
+      if(children.length) inner += `<div class="tgrp"><span class="tlbl dn">↓ ${children.length} enfant${children.length>1?'s':''}</span><ul>${children.map(li).join('')}</ul></div>`;
+      const sum = [parents.length?parents.length+'↑':'', children.length?children.length+'↓':''].filter(Boolean).join(' ');
+      treeCell = `<details class="parents"><summary>${sum}</summary>${inner}</details>`;
+    } else {
+      treeCell = '<span class="muted">—</span>';
+    }
+    return `<tr>
+      <td><span class="flagcount" style="background:${r.flag_count?'#c0392b':'#27ae60'}">${r.flag_count}</span></td>
+      <td><a class="key" href="${r.url}" target="_blank">${r.key}</a></td>
+      <td>${r.summary||'<span class=muted>—</span>'}</td>
+      <td>${r.assignee?r.assignee:'<span class=muted>—</span>'}</td>
+      <td><span class="pill-status">${r.status||'—'}</span></td>
+      <td class="${idleCls}">${idleTxt}</td>
+      <td>${treeCell}</td>
+      <td>${badges||'<span class=muted>Conforme ✅</span>'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty">Aucun ticket ne correspond aux filtres.</td></tr>';
+
+  // maj indicateurs de tri
+  document.querySelectorAll('th[data-sort]').forEach(th=>{
+    th.classList.remove('asc','desc');
+    if(th.dataset.sort===sortKey) th.classList.add(sortDir>0?'asc':'desc');
+  });
+}
+
+// Tri par colonne
+document.querySelectorAll('th[data-sort]').forEach(th=>th.addEventListener('click',()=>{
+  const k = th.dataset.sort;
+  if(sortKey===k) sortDir*=-1; else { sortKey=k; sortDir = (k==='days_idle'||k==='flag_count')?-1:1; }
+  renderRows();
+}));
+
+$('#search').addEventListener('input', renderRows);
+$('#mode').addEventListener('change', renderRows);
+['fCreator','fReporter','fParticipant'].forEach(id=>
+  $('#'+id).addEventListener('change', renderRows));
+
+// Multi-select "Personne assignée" : ouverture/fermeture, recherche, tout/aucun
+$('#msAssigneeBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  $('#msAssigneePanel').classList.toggle('open');
+});
+$('#msAssigneePanel').addEventListener('click', e=>e.stopPropagation());
+document.addEventListener('click', ()=> $('#msAssigneePanel').classList.remove('open'));
+$('#msAssigneeSearch').addEventListener('input', e=>{
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('#msAssigneeList .ms-opt').forEach(o=>{
+    o.classList.toggle('hidden', !o.textContent.toLowerCase().includes(q));
+  });
+});
+$('#msAssigneeAll').addEventListener('click', ()=>{
+  document.querySelectorAll('#msAssigneeList .ms-opt:not(.hidden) input').forEach(cb=>{
+    cb.checked = true; selAssignees.add(cb.value);
+  });
+  updateAssigneeLabel(); renderRows();
+});
+$('#msAssigneeNone').addEventListener('click', ()=>{
+  selAssignees.clear();
+  document.querySelectorAll('#msAssigneeList input').forEach(cb=>cb.checked=false);
+  updateAssigneeLabel(); renderRows();
+});
+
+$('#clearFilters').addEventListener('click', ()=>{ activeFilters.clear(); $('#search').value='';
+  selAssignees.clear();
+  ['fCreator','fReporter','fParticipant'].forEach(id=>{ $('#'+id).value=''; });
+  render(); });
+$('#refreshBtn').addEventListener('click', ()=>refresh({reload:true}));
+$('#staleDays').addEventListener('change', ()=>refresh({reload:false}));
+$('#incDone').addEventListener('change', ()=>refresh({reload:false}));
+
+// Menu export : conserve les filtres courants (seuil + terminés)
+$('#exportBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  $('#exportMenu').classList.toggle('open');
+});
+document.addEventListener('click', ()=> $('#exportMenu').classList.remove('open'));
+document.querySelectorAll('#exportMenu a').forEach(a=>a.addEventListener('click', e=>{
+  e.preventDefault();
+  const fmt = a.dataset.fmt;
+  const p = new URLSearchParams();
+  p.set('stale_days', $('#staleDays').value);
+  p.set('include_done', $('#incDone').checked ? 1 : 0);
+  // filtres courants (pour que l'export corresponde à ce qui est affiché)
+  p.set('mode', $('#mode').value);
+  [...activeFilters].forEach(f=>p.append('check', f));
+  [...selAssignees].forEach(v=>p.append('assignee', v));
+  if($('#fCreator').value) p.set('creator', $('#fCreator').value);
+  if($('#fReporter').value) p.set('reporter', $('#fReporter').value);
+  if($('#fParticipant').value) p.set('participant', $('#fParticipant').value);
+  const s = ($('#search').value||'').trim();
+  if(s) p.set('q', s);
+  window.location.href = `/export/quality/${fmt}?${p.toString()}`;
+  $('#exportMenu').classList.remove('open');
+}));
+
+// Popup personnes : présent vs manquant
+const escHtml = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function showPeople(key){
+  const r = (DATA && DATA.issues || []).find(x=>x.key===key);
+  if(!r) return;
+  const parts = r.participants || [];
+  const inPart = r.assignee_in_participants;   // true / false / null
+  const ok = [], ko = [];
+
+  // Responsable (personne assignée)
+  if(r.assignee){
+    ok.push(`<li><span class="ic">👤</span><span><span class="pv-tag">Responsable</span>${escHtml(r.assignee)}</span></li>`);
+  } else {
+    ko.push(`<li><span class="ic">👤</span><span><span class="pv-tag">Responsable</span>Aucune personne assignée</span></li>`);
+  }
+
+  // Participants à la requête
+  if(parts.length){
+    parts.forEach(p=>{
+      const isA = r.assignee && p===r.assignee;
+      ok.push(`<li><span class="ic">${isA?'⭐':'✅'}</span><span><span class="pv-tag">Participant${isA?' (=responsable)':''}</span>${escHtml(p)}</span></li>`);
+    });
+  } else {
+    ko.push(`<li><span class="ic">👥</span><span><span class="pv-tag">Participants à la demande</span>Aucun participant à la requête</span></li>`);
+  }
+
+  // Cohérence responsable / participants
+  if(inPart===true){
+    ok.push(`<li><span class="ic">🔗</span><span><span class="pv-tag">Cohérence</span>Le responsable figure dans les participants</span></li>`);
+  } else if(inPart===false){
+    ko.push(`<li><span class="ic">🔗</span><span><span class="pv-tag">Cohérence</span>Le responsable <b>${escHtml(r.assignee)}</b> est absent des participants</span></li>`);
+  }
+
+  $('#pmKey').innerHTML = `<a href="${r.url}" target="_blank">${r.key}</a>`;
+  $('#pmSum').textContent = r.summary || '';
+  $('#pmOk').innerHTML = ok.length ? ok.join('') : '<li class="none">Rien à signaler</li>';
+  $('#pmKo').innerHTML = ko.length ? ko.join('') : '<li class="none">Aucune information manquante 🎉</li>';
+  $('#peopleModal').classList.add('open');
+}
+function closePeople(){ $('#peopleModal').classList.remove('open'); }
+$('#pmClose').addEventListener('click', closePeople);
+$('#peopleModal').addEventListener('click', e=>{ if(e.target.id==='peopleModal') closePeople(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePeople(); });
+
+// Popup doublons : liste des tickets de même intitulé (cliquables)
+function showDuplicates(key){
+  const r = (DATA && DATA.issues || []).find(x=>x.key===key);
+  if(!r) return;
+  const dups = r.duplicates || [];
+  $('#dupKey').innerHTML = `<a href="${r.url}" target="_blank">${escHtml(r.key)}</a>`;
+  $('#dupSum').textContent = r.summary || '';
+  $('#dupList').innerHTML = dups.length ? dups.map(d=>
+    `<li><a href="${d.url}" target="_blank">${escHtml(d.key)}</a>${d.summary?' — '+escHtml(d.summary):''}</li>`
+  ).join('') : '<li class="none">Aucun doublon identifié.</li>';
+  $('#dupModal').classList.add('open');
+}
+function closeDup(){ $('#dupModal').classList.remove('open'); }
+$('#dupClose').addEventListener('click', closeDup);
+$('#dupModal').addEventListener('click', e=>{ if(e.target.id==='dupModal') closeDup(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDup(); });
+
+// Chargement initial
+refresh({reload:false});
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Secrets & config locale
+.env
+
+# Sorties generees
+out/
+*.pptx
+*.eml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.msal_cache.bin
+
+# Cache de donnees brutes
+data/raw/

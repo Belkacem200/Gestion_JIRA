@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }}</title>
+  <style>
+    :root {
+      --blue: #003B7A; --blue2:#0a5bb5; --bg:#f4f7fb; --card:#fff;
+      --red:#c0392b; --orange:#e67e22; --green:#27ae60; --grey:#667; --line:#e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:#1a2233; }
+    header {
+      background:linear-gradient(120deg,var(--blue),var(--blue2)); color:#fff;
+      padding:18px 28px; display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 2px 10px rgba(0,0,0,.15); position:sticky; top:0; z-index:10;
+    }
+    header h1 { margin:0; font-size:20px; font-weight:600; }
+    header .sub { font-size:12px; opacity:.85; margin-top:2px; }
+    .controls { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .controls label { font-size:13px; display:flex; align-items:center; gap:6px; }
+    select, button { font-family:inherit; font-size:14px; border-radius:8px; border:none; }
+    select { padding:7px 10px; }
+    .btn {
+      background:#fff; color:var(--blue); font-weight:600; padding:9px 18px; cursor:pointer;
+      transition:.15s; box-shadow:0 2px 6px rgba(0,0,0,.12);
+    }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.2); }
+    .btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+    .btn.ghost { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.5); box-shadow:none; }
+    main { padding:24px 28px; max-width:1200px; margin:0 auto; }
+    .status { font-size:13px; margin:0 0 16px; min-height:20px; }
+    .spinner { display:inline-block; width:14px; height:14px; border:2px solid #ccc;
+      border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin-bottom:22px; }
+    .kpi { background:var(--card); border-radius:12px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,.06); text-align:center; }
+    .kpi .v { font-size:30px; font-weight:700; color:var(--blue); }
+    .kpi .l { font-size:12px; color:var(--grey); margin-top:4px; text-transform:uppercase; letter-spacing:.5px; }
+    .kpi.red .v{color:var(--red);} .kpi.orange .v{color:var(--orange);} .kpi.green .v{color:var(--green);}
+    .card { background:var(--card); border-radius:12px; padding:18px 20px; margin-bottom:22px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+    .card h2 { margin:0 0 14px; font-size:16px; color:var(--blue); border-bottom:2px solid var(--line); padding-bottom:8px; }
+    ul.hl { margin:0; padding-left:20px; } ul.hl li { margin:4px 0; font-size:14px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; background:#f0f4fa; color:var(--blue); padding:8px 10px; position:sticky; }
+    td { padding:7px 10px; border-top:1px solid var(--line); vertical-align:top; }
+    tr:hover td { background:#f8fafd; }
+    .bar { height:8px; border-radius:4px; background:#e6ebf2; overflow:hidden; width:90px; display:inline-block; vertical-align:middle; }
+    .bar > i { display:block; height:100%; background:linear-gradient(90deg,var(--blue2),var(--green)); }
+    .pct { font-size:12px; color:var(--grey); margin-left:6px; }
+    .pill { padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; }
+    .sev-eleve{background:var(--red);} .sev-moyen{background:var(--orange);} .sev-faible{background:#c9a227;}
+    .tag-over{color:var(--red); font-weight:600;}
+    .dl { display:flex; gap:10px; flex-wrap:wrap; }
+    .dl a { text-decoration:none; background:var(--blue); color:#fff; padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600; }
+    .dl a:hover{ background:var(--blue2); }
+    a.key { color:var(--blue2); font-weight:600; text-decoration:none; }
+    .muted { color:var(--grey); font-size:13px; }
+    .tabs { display:flex; gap:8px; margin-bottom:12px; }
+    .tab { padding:7px 14px; border-radius:8px 8px 0 0; cursor:pointer; font-size:13px; background:#e8eef6; color:var(--blue); font-weight:600; }
+    .tab.active { background:var(--card); box-shadow:0 -2px 6px rgba(0,0,0,.05); }
+    .hidden{ display:none; }
+    .empty{ text-align:center; padding:60px 20px; color:var(--grey); }    .notes-card { background:var(--card); border-radius:12px; padding:12px 18px; margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+    .notes-card summary { cursor:pointer; font-weight:600; color:var(--blue); font-size:14px; }
+    .notes-card textarea { width:100%; min-height:120px; margin-top:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px; resize:vertical; box-sizing:border-box; }
+    .notes-hint { font-size:12px; color:var(--grey); margin-top:6px; }
+    .hot { display:flex; flex-wrap:wrap; gap:8px; }
+    .hot .chip { background:#fff3e6; color:#b3541e; border:1px solid #f0c9a3; border-radius:14px; padding:4px 12px; font-size:13px; font-weight:600; }  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=3">
+</head>
+<body>
+  <header>
+    <div class="head-left">
+      <a class="brand" href="/" aria-label="Bouygues Telecom — accueil">
+        <span class="bt-word">
+          <span class="bt-word-b">bouygues</span>
+          <span class="bt-word-t">telecom</span>
+        </span>
+        <svg class="bt-mark" viewBox="0 0 100 100" role="img" aria-label="Bouygues Telecom">
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#4fb4e6" transform="rotate(0 50 50)"/>
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#ee7c00" transform="rotate(120 50 50)"/>
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#003a87" transform="rotate(240 50 50)"/>
+        </svg>
+      </a>
+      <span class="head-div"></span>
+      <div class="head-title">
+        <h1>{{ title }}</h1>
+        <div class="sub" id="genAt">Aucun rapport généré — cliquez sur « Générer »</div>
+      </div>
+    </div>
+    <div class="controls">
+      <label>Périmètre
+        <select id="scope">
+          <option value="3">3 mois</option>
+          <option value="6">6 mois</option>
+          <option value="8" selected>8 mois</option>
+          <option value="12">12 mois</option>
+          <option value="24">24 mois</option>
+        </select>
+      </label>
+      {% if graph_ok %}
+      <label><input type="checkbox" id="useGraph" /> + Emails/Réunions</label>
+      {% endif %}
+      <button class="btn" id="genBtn">Générer / Rafraîchir</button>
+      <a class="btn ghost" href="/roadmap" style="text-decoration:none;">Roadmap</a>
+      <a class="btn ghost" href="/actualite" style="text-decoration:none;">Actualité</a>
+      <a class="btn ghost" href="/quality" style="text-decoration:none;">Qualité</a>
+      <label class="ghost" style="border:none;"><input type="checkbox" id="auto" /> Auto (5 min)</label>
+    </div>
+  </header>
+
+  <main>
+    <p class="status" id="status"></p>
+
+    <details class="notes-card" id="notesCard">
+      <summary>📋 Coller des CR de réunion / emails (optionnel) — croisés avec les tickets</summary>
+      <textarea id="notes" placeholder="Colle ici tes comptes-rendus de réunion Copilot, extraits d'emails...&#10;Sépare plusieurs éléments par une ligne --- ou une ligne vide.&#10;&#10;Ex :&#10;Réunion NSO 04/09 — revue automation, BACNSO-3 identifié comme risque, escalade dépendance réseau.&#10;---&#10;Mail chef de projet : compliance BGP toujours bloquée côté réseau."></textarea>
+      <div class="notes-hint">Ces notes servent à détecter les « sujets chauds » (mots-clés et clés de tickets récurrents). Elles ne sont pas envoyées sur internet.</div>
+    </details>
+
+    <div id="content">
+      <div class="empty" id="empty">
+        <p style="font-size:40px;margin:0;">📊</p>
+        <p>Aucune donnée pour l'instant.<br/>Cliquez sur <b>« Générer / Rafraîchir »</b> pour extraire JIRA et construire le rapport.</p>
+      </div>
+
+      <div id="report" class="hidden">
+        <!-- Téléchargements -->
+        <div class="card">
+          <h2>Livrables</h2>
+          <div class="dl">
+            <a href="/download/md" target="_blank">⬇️ Markdown</a>
+            <a href="/download/pptx" target="_blank">⬇️ PowerPoint</a>
+            <a href="/download/eml" target="_blank">⬇️ Email (.eml)</a>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpis" id="kpis"></div>
+
+        <!-- Sujets chauds (mails/réunions collés) -->
+        <div class="card hidden" id="hotCard">
+          <h2>🔥 Sujets chauds (croisés mails / réunions)</h2>
+          <div id="hotTopics"></div>
+        </div>
+
+        <!-- Synthèse -->
+        <div class="card">
+          <h2>Synthèse exécutive</h2>
+          <ul class="hl" id="highlights"></ul>
+        </div>
+
+        <!-- Roadmap -->
+        <div class="card">
+          <h2>Roadmap</h2>
+          <div class="tabs">
+            <div class="tab active" data-tab="encours">🚧 En cours</div>
+            <div class="tab" data-tab="avenir">🗓️ À venir</div>
+          </div>
+          <div id="tab-encours"><table id="tblEnCours"></table></div>
+          <div id="tab-avenir" class="hidden"><table id="tblAVenir"></table></div>
+        </div>
+
+        <!-- Risques -->
+        <div class="card">
+          <h2>Points bloquants &amp; risques</h2>
+          <table id="tblRisks"></table>
+        </div>
+
+        <!-- Charge -->
+        <div class="card">
+          <h2>Répartition de la charge</h2>
+          <table id="tblWorkload"></table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+const $ = s => document.querySelector(s);
+let poll = null, autoTimer = null;
+
+function bar(pct){ return `<span class="bar"><i style="width:${pct}%"></i></span><span class="pct">${pct}%</span>`; }
+
+function setStatus(txt, spin){
+  $('#status').innerHTML = (spin ? '<span class="spinner"></span> ' : '') + (txt||'');
+}
+
+async function generate(){
+  const btn = $('#genBtn'); btn.disabled = true;
+  const body = {
+    scope_months: parseInt($('#scope').value,10),
+    use_graph: $('#useGraph') ? $('#useGraph').checked : false,
+    notes: $('#notes') ? $('#notes').value : ''
+  };
+  setStatus('Lancement...', true);
+  const r = await fetch('/api/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if(r.status===409){ setStatus('Une génération est déjà en cours...', true); }
+  poll = setInterval(checkStatus, 1200);
+}
+
+async function checkStatus(){
+  const s = await (await fetch('/api/status')).json();
+  if(s.running){ setStatus(s.step, true); return; }
+  clearInterval(poll); poll=null;
+  $('#genBtn').disabled = false;
+  if(s.error){ setStatus('❌ Erreur : ' + s.error); return; }
+  if(s.has_result){ setStatus('✅ Rapport à jour — ' + s.generated_at); await loadResult(); }
+  else { setStatus(''); }
+}
+
+async function loadResult(){
+  const j = await (await fetch('/api/last')).json();
+  if(!j.ok) return;
+  render(j.data);
+}
+
+function render(d){
+  $('#empty').classList.add('hidden');
+  $('#report').classList.remove('hidden');
+  $('#genAt').textContent = 'Généré le ' + d.generated_at + ' — ' + d.title;
+
+  const k = d.kpis;
+  const prClass = k.progress_pct>=60?'green':(k.progress_pct>=30?'orange':'red');
+  $('#kpis').innerHTML = `
+    <div class="kpi ${prClass}"><div class="v">${k.progress_pct}%</div><div class="l">Avancement</div></div>
+    <div class="kpi"><div class="v">${k.total}</div><div class="l">Tickets</div></div>
+    <div class="kpi green"><div class="v">${k.done}</div><div class="l">Terminés</div></div>
+    <div class="kpi orange"><div class="v">${k.in_progress}</div><div class="l">En cours</div></div>
+    <div class="kpi"><div class="v">${k.todo}</div><div class="l">À faire</div></div>
+    <div class="kpi red"><div class="v">${k.risks_high}</div><div class="l">Risques élevés</div></div>
+    <div class="kpi"><div class="v">${k.upcoming}</div><div class="l">À venir (${k.scope_months} m)</div></div>
+    <div class="kpi"><div class="v">${k.momentum==='positif'?'📈':(k.momentum==='stable'?'➡️':'⚠️')}</div><div class="l">${k.momentum}</div></div>
+  `;
+
+  $('#highlights').innerHTML = d.highlights.map(h=>`<li>${h}</li>`).join('');
+
+  // Sujets chauds (issus des notes collees)
+  const hot = d.hot_topics || [];
+  if(hot.length){
+    $('#hotCard').classList.remove('hidden');
+    $('#hotTopics').innerHTML = '<div class="hot">' + hot.map(t=>`<span class="chip">${t}</span>`).join('') + '</div>';
+  } else {
+    $('#hotCard').classList.add('hidden');
+  }
+
+  // Roadmap en cours
+  let rows = d.roadmap_en_cours.map(r=>`<tr>
+    <td>${r.name}</td>
+    <td>${bar(r.progress)}</td>
+    <td>${r.in_progress}</td><td>${r.todo}</td>
+    <td>${r.due}${r.overdue?` <span class="tag-over">⚠️+${r.overdue}</span>`:''}</td>
+    <td>${r.blockers?`<span class="pill sev-eleve">${r.blockers}</span>`:'-'}</td>
+  </tr>`).join('');
+  $('#tblEnCours').innerHTML = `<tr><th>Chantier (epic)</th><th>Avanc.</th><th>En cours</th><th>Reste</th><th>Échéance</th><th>Bloq.</th></tr>${rows||'<tr><td colspan=6 class=muted>Aucun</td></tr>'}`;
+
+  // Roadmap à venir
+  rows = d.roadmap_a_venir.map(r=>`<tr><td>${r.name}</td><td>${r.todo}</td><td>${r.due}</td></tr>`).join('');
+  $('#tblAVenir').innerHTML = `<tr><th>Chantier (epic)</th><th>À faire</th><th>Échéance</th></tr>${rows||'<tr><td colspan=3 class=muted>Aucun</td></tr>'}`;
+
+  // Risques
+  rows = d.risks.slice(0,40).map(r=>`<tr>
+    <td><span class="pill sev-${r.severity}">${r.severity}</span></td>
+    <td><a class="key" href="${r.url}" target="_blank">${r.key}</a></td>
+    <td>${r.summary}</td>
+    <td class="muted">${r.reason}</td>
+    <td>${r.assignee}</td>
+  </tr>`).join('');
+  $('#tblRisks').innerHTML = `<tr><th>Sév.</th><th>Ticket</th><th>Sujet</th><th>Motif</th><th>Responsable</th></tr>${rows||'<tr><td colspan=5 class=muted>Aucun</td></tr>'}`;
+
+  // Charge
+  rows = d.workload.slice(0,15).map(w=>`<tr><td>${w.person}</td><td>${w.load}</td></tr>`).join('');
+  $('#tblWorkload').innerHTML = `<tr><th>Personne</th><th>Tickets ouverts</th></tr>${rows}`;
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  $('#tab-encours').classList.toggle('hidden', t.dataset.tab!=='encours');
+  $('#tab-avenir').classList.toggle('hidden', t.dataset.tab!=='avenir');
+}));
+
+$('#genBtn').addEventListener('click', generate);
+$('#auto').addEventListener('change', e=>{
+  if(e.target.checked){ autoTimer=setInterval(generate, 5*60*1000); setStatus('Auto-refresh activé (5 min).'); }
+  else { clearInterval(autoTimer); autoTimer=null; }
+});
+
+// Au chargement : afficher le dernier résultat si présent
+loadResult();
+</script>
+</body>
+</html>

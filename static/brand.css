@@ -1,0 +1,135 @@
+/* =============================================================================
+   Bouygues Telecom — habillage de marque pour l'application BACNSO
+   Cette feuille est chargée APRÈS les styles internes de chaque page : elle
+   remappe les variables de couleur déjà utilisées par les gabarits (donc tout
+   se recolore) et restyle l'ossature (en-tête, logo, boutons, cartes, KPI…).
+   Aucune structure HTML ni aucun script n'est modifié.
+   ============================================================================= */
+
+:root {
+  /* Palette Bouygues Telecom */
+  --bt-navy:   #131c3a;   /* bleu nuit quasi-noir (titres, texte fort) */
+  --bt-blue:   #0071bc;   /* bleu interactif (liens, boutons) */
+  --bt-bright: #009de0;   /* bleu vif signature (accents, focus) */
+  --bt-ink:    #1b2437;   /* texte courant */
+  --bt-muted:  #6b7688;   /* texte secondaire */
+  --bt-line:   #e7ecf3;   /* filets / bordures */
+  --bt-bg:     #f5f7fb;   /* fond de page */
+
+  /* --- Remap des variables des gabarits : tout l'app suit la marque --- */
+  --blue:  #131c3a;
+  --blue2: #0071bc;
+  --bg:    #f5f7fb;
+  --card:  #ffffff;
+  --line:  #e7ecf3;
+  --grey:  #6b7688;
+  --green: #1f9d6b;
+  --orange:#ef8a2b;
+  --red:   #e13b34;
+
+  /* Tokens des pages Actualité / Roadmap */
+  --comment: #0071bc;
+  --change:  #ef8a2b;
+  --created: #1f9d6b;
+  --todo:    #5b7fb0;
+}
+
+html { -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+body {
+  font-family:'Rubik','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  background:var(--bt-bg);
+  color:var(--bt-ink);
+}
+
+/* -------------------------------------------------------------- En-tête ---- */
+/* En-tête blanc et épuré, comme bouyguestelecom.fr */
+header {
+  background:#ffffff;
+  color:var(--bt-navy);
+  border-bottom:1px solid var(--bt-line);
+  box-shadow:0 2px 14px rgba(17,34,64,.06);
+}
+header h1 { color:var(--bt-navy); font-weight:700; font-size:20px; letter-spacing:-.2px; }
+header .sub { color:var(--bt-muted); opacity:1; font-weight:400; }
+/* Textes & contrôles de l'en-tête en sombre (surcharge les color:#fff en ligne) */
+header label { color:var(--bt-navy) !important; }
+header select, header input[type=text] {
+  color:var(--bt-navy) !important; background:#fff;
+  border:1px solid var(--bt-line) !important;
+}
+
+/* Logo officiel Bouygues Telecom, posé directement sur le blanc (comme le site) */
+.head-left  { display:flex; align-items:center; gap:18px; min-width:0; }
+.head-div   { width:1px; height:38px; background:var(--bt-line); flex:0 0 1px; }
+.head-title { min-width:0; }
+.brand {
+  display:inline-flex; align-items:center; gap:10px; text-decoration:none; white-space:nowrap;
+}
+.bt-word { display:flex; flex-direction:column; line-height:1; }
+.bt-word-b { font-weight:700; font-size:23px; color:#16a6de; letter-spacing:-.5px; }
+.bt-word-t { font-weight:600; font-size:9px; letter-spacing:4.5px; color:#16a6de;
+             text-transform:uppercase; align-self:flex-end; margin-top:3px; }
+.bt-mark { width:40px; height:40px; flex:0 0 40px; display:block; }
+
+/* --------------------------------------------------- Boutons (pilule BT) ---- */
+.btn {
+  border-radius:26px; font-weight:600; letter-spacing:.1px;
+  transition:transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+}
+/* Bouton principal : bleu plein (CTA Bouygues) */
+.btn:not(.ghost) { background:var(--bt-blue); color:#fff; box-shadow:0 2px 10px rgba(0,113,188,.22); }
+.btn:not(.ghost):hover { background:#005e9e; transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,113,188,.28); }
+/* Bouton secondaire : contour léger sur blanc */
+.btn.ghost { background:#fff; color:var(--bt-navy); border:1.5px solid var(--bt-line); box-shadow:none; }
+.btn.ghost:hover { background:#f4f7fb; border-color:#cdd8e8; transform:translateY(-1px); }
+
+/* ------------------------------------------------------ Cartes & titres ---- */
+.card { border:1px solid var(--bt-line); border-radius:20px; box-shadow:0 4px 20px rgba(17,34,64,.05); padding:22px 24px; }
+.card h2 {
+  color:var(--bt-navy); border-bottom:none; margin:0 0 16px; padding:0;
+  font-weight:700; font-size:18px; letter-spacing:-.2px;
+}
+
+/* ---------------------------------------------------------------- KPI ------ */
+.kpi { border:1px solid var(--bt-line); border-radius:18px; box-shadow:0 4px 18px rgba(17,34,64,.05); padding:18px 16px; }
+.kpi .v { color:var(--bt-navy); font-weight:800; letter-spacing:-.5px; }
+.kpi .l { letter-spacing:.4px; color:var(--bt-muted); }
+
+/* --------------------------------------------------------------- Tables ---- */
+th { background:#f4f7fb; color:var(--bt-navy); font-weight:600; }
+tr:hover td { background:#f7fafd; }
+a.key { color:var(--bt-blue); font-weight:600; }
+
+/* -------------------------------------------------------------- Champs ------ */
+input[type=text], select, textarea { border-radius:10px; }
+input[type=text]:focus, select:focus, textarea:focus {
+  outline:none; border-color:var(--bt-bright);
+  box-shadow:0 0 0 3px rgba(0,157,224,.18);
+}
+
+/* ---------------------------------------------- Cartes-filtres (Qualité) ---- */
+.qc { border-radius:14px; }
+.qc.active { border-color:var(--bt-bright); box-shadow:0 4px 16px rgba(0,157,224,.22); }
+
+/* -------------------------------------------------------- Puces (Actu) ------ */
+.chip { border-radius:999px; }
+.chip.active[data-type=all] { background:var(--bt-navy); }
+
+/* ---------------------------------------------------- Menus déroulants ------ */
+.menu-items { border:1px solid var(--bt-line); border-radius:12px; overflow:hidden; }
+
+/* ------------------------------------------- Liens de livrables (dash) ------ */
+.dl a { border-radius:999px; background:var(--bt-blue); }
+.dl a:hover { background:var(--bt-bright); }
+
+/* -------------------------------------------------- Onglets (dashboard) ---- */
+.tab { border-radius:12px 12px 0 0; }
+.tab.active { color:var(--bt-navy); box-shadow:inset 0 -3px 0 var(--bt-bright); }
+
+/* ------------------------------------------------- Ascenseurs discrets ----- */
+*::-webkit-scrollbar { height:10px; width:10px; }
+*::-webkit-scrollbar-thumb { background:#cdd9e8; border-radius:6px; }
+*::-webkit-scrollbar-thumb:hover { background:#b4c3d9; }
+
+/* -------------------------------------------------- Sélection de texte ----- */
+::selection { background:rgba(0,157,224,.22); }

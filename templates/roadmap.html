@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roadmap — {{ title }}</title>
+  <style>
+    :root {
+      --blue:#003B7A; --blue2:#0a5bb5; --bg:#f4f7fb; --card:#fff;
+      --red:#c0392b; --orange:#e67e22; --green:#27ae60; --grey:#667; --line:#e2e8f0;
+      --todo:#5b7fb0; --lw:300px; --mw:96px;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:#1a2233; }
+    header {
+      background:linear-gradient(120deg,var(--blue),var(--blue2)); color:#fff;
+      padding:16px 28px; display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 2px 10px rgba(0,0,0,.15); position:sticky; top:0; z-index:20; flex-wrap:wrap; gap:10px;
+    }
+    header h1 { margin:0; font-size:19px; font-weight:600; }
+    header .sub { font-size:12px; opacity:.85; margin-top:2px; }
+    .controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .btn { background:#fff; color:var(--blue); font-weight:600; padding:9px 16px; cursor:pointer;
+      border:none; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.12); font-size:14px; text-decoration:none; }
+    .btn:hover { transform:translateY(-1px); }
+    .btn.ghost { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.5); box-shadow:none; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    /* menu export */
+    .menu { position:relative; display:inline-block; }
+    .menu-items { display:none; position:absolute; right:0; top:110%; background:#fff; border-radius:8px;
+      box-shadow:0 6px 20px rgba(0,0,0,.2); overflow:hidden; z-index:40; min-width:190px; }
+    .menu-items.open { display:block; }
+    .menu-items a { display:block; padding:10px 14px; color:#1a2233; text-decoration:none; font-size:14px; }
+    .menu-items a:hover { background:#eef3fa; }
+    main { padding:22px 28px; max-width:1500px; margin:0 auto; }
+    .status { font-size:13px; min-height:20px; margin:0 0 14px; }
+    .spinner { display:inline-block; width:14px; height:14px; border:2px solid #ccc;
+      border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    /* KPIs */
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:18px; }
+    .kpi { background:var(--card); border-radius:12px; padding:14px; box-shadow:0 1px 4px rgba(0,0,0,.06); text-align:center; }
+    .kpi .v { font-size:26px; font-weight:700; color:var(--blue); }
+    .kpi .l { font-size:11px; color:var(--grey); margin-top:4px; text-transform:uppercase; letter-spacing:.4px; }
+    .kpi.green .v{color:var(--green);} .kpi.orange .v{color:var(--orange);}
+    .kpi.red .v{color:var(--red);} .kpi.todo .v{color:var(--todo);}
+    /* toolbar */
+    .toolbar { display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:0 0 14px; }
+    .toolbar input[type=text] { padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px; width:260px; }
+    .toolbar label { font-size:13px; color:var(--grey); display:flex; align-items:center; gap:6px; }
+    .toolbar select { padding:7px 10px; border:1px solid var(--line); border-radius:8px; }
+    .legend { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-left:auto; font-size:12px; color:var(--grey); }
+    .legend span { display:inline-flex; align-items:center; gap:5px; }
+    .lg-box { width:14px; height:10px; border-radius:3px; display:inline-block; }
+    .lg-today { width:2px; height:14px; background:var(--red); display:inline-block; }
+    /* chart */
+    .rm-wrap { background:var(--card); border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.06); overflow-x:auto; overflow-y:visible; padding-bottom:6px; }
+    .rm-chart { min-width:100%; width:calc(var(--lw) + var(--mw) * var(--cols)); position:relative; }
+    .rm-head { display:flex; position:sticky; top:0; z-index:6; background:#eef3fa; border-bottom:1px solid var(--line); }
+    .rm-corner { flex:0 0 var(--lw); width:var(--lw); padding:10px 12px; font-size:12px; font-weight:700;
+      color:var(--blue); position:sticky; left:0; background:#eef3fa; z-index:7; border-right:1px solid var(--line); }
+    .rm-months { display:flex; flex:1; }
+    .rm-mo { flex:1; min-width:var(--mw); text-align:center; padding:9px 2px; font-size:11.5px; color:var(--blue);
+      border-left:1px solid var(--line); white-space:nowrap; }
+    .rm-mo.q1 { background:rgba(10,91,181,.05); }
+    .rm-body { position:relative; }
+    .rm-overlay { position:absolute; top:0; bottom:0; left:var(--lw); right:0; pointer-events:none; z-index:5; }
+    .rm-today { position:absolute; top:0; bottom:0; width:2px; background:var(--red); }
+    .rm-today::after { content:'aujourd’hui'; position:absolute; top:-1px; left:4px; font-size:10px; color:var(--red);
+      font-weight:700; background:rgba(255,255,255,.85); padding:0 3px; border-radius:3px; white-space:nowrap; }
+    .rm-row { display:flex; align-items:stretch; border-bottom:1px solid #eef1f6; min-height:38px; }
+    .rm-row:hover { background:#f8fafd; }
+    .rm-row.child { background:#fbfcfe; }
+    .rm-row.child:hover { background:#f2f6fc; }
+    .rm-group { display:flex; align-items:center; padding:12px 12px 4px; font-size:12px; font-weight:700;
+      color:var(--grey); text-transform:uppercase; letter-spacing:.4px; position:sticky; left:0; }
+    .rm-label { flex:0 0 var(--lw); width:var(--lw); padding:7px 12px; position:sticky; left:0; z-index:4;
+      background:inherit; border-right:1px solid var(--line); display:flex; align-items:center; gap:8px; overflow:hidden; }
+    .rm-row:hover .rm-label { background:#f8fafd; }
+    .rm-row.child .rm-label { background:#fbfcfe; padding-left:26px; }
+    .rm-label .tw { min-width:0; }
+    .rm-label a.key { color:var(--blue2); font-weight:700; text-decoration:none; font-size:12.5px; white-space:nowrap; }
+    .rm-label .sm { font-size:12px; color:#33415a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; display:block; }
+    .rm-label .meta { font-size:10.5px; color:var(--grey); margin-top:1px; }
+    .rm-toggle { cursor:pointer; width:16px; height:16px; flex:0 0 16px; border-radius:4px; background:#e3ecf8;
+      color:var(--blue); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; user-select:none; }
+    .rm-toggle:hover { background:#cfe0f6; }
+    .rm-toggle.leaf { visibility:hidden; }
+    .rm-track { position:relative; flex:1; min-width:calc(var(--mw) * var(--cols));
+      background-image:linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size:var(--mw) 100%; }
+    .rm-bar { position:absolute; top:50%; transform:translateY(-50%); height:16px; border-radius:5px;
+      background:var(--c,#5b7fb0); box-shadow:0 1px 3px rgba(0,0,0,.18); cursor:pointer; overflow:hidden;
+      display:flex; align-items:center; text-decoration:none; min-width:5px; }
+    .rm-bar:hover { filter:brightness(1.08); box-shadow:0 2px 7px rgba(0,0,0,.3); }
+    .rm-bar.ongoing { background:linear-gradient(90deg, var(--c,#5b7fb0) 62%, rgba(120,140,170,.18)); }
+    .rm-bar.epic { height:22px; border-radius:7px; background:#d7e2f2; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+    .rm-bar.epic > i { display:block; height:100%; background:linear-gradient(90deg,var(--blue2),var(--green));
+      border-radius:inherit; }
+    .rm-bar.overdue { outline:2px solid var(--red); outline-offset:-2px; }
+    .rm-cap { position:absolute; left:8px; right:6px; font-size:10.5px; font-weight:700; color:#fff;
+      white-space:nowrap; text-shadow:0 1px 1px rgba(0,0,0,.35); pointer-events:none; }
+    .rm-bar.epic .rm-cap { color:#12315e; text-shadow:none; }
+    .rm-out { position:absolute; top:50%; transform:translateY(-50%); font-size:10.5px; color:#33415a;
+      white-space:nowrap; padding-left:6px; pointer-events:none; }
+    .empty { text-align:center; padding:60px 20px; color:var(--grey); }
+    .hint { font-size:12px; color:var(--grey); margin:10px 2px 0; }
+    /* tooltip */
+    #tip { position:fixed; z-index:200; background:#12233d; color:#fff; padding:9px 12px; border-radius:8px;
+      font-size:12px; max-width:320px; box-shadow:0 8px 26px rgba(0,0,0,.35); pointer-events:none; display:none; line-height:1.5; }
+    #tip b { color:#9ec5ff; }
+    #tip .tt-st { display:inline-block; padding:1px 7px; border-radius:9px; font-size:10.5px; color:#fff; margin-top:3px; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=3">
+</head>
+<body>
+  <header>
+    <div class="head-left">
+      <a class="brand" href="/" aria-label="Bouygues Telecom — accueil">
+        <span class="bt-word">
+          <span class="bt-word-b">bouygues</span>
+          <span class="bt-word-t">telecom</span>
+        </span>
+        <svg class="bt-mark" viewBox="0 0 100 100" role="img" aria-label="Bouygues Telecom">
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#4fb4e6" transform="rotate(0 50 50)"/>
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#ee7c00" transform="rotate(120 50 50)"/>
+          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#003a87" transform="rotate(240 50 50)"/>
+        </svg>
+      </a>
+      <span class="head-div"></span>
+      <div class="head-title">
+        <h1>Roadmap automatique</h1>
+        <div class="sub" id="genAt">—</div>
+      </div>
+    </div>
+    <div class="controls">
+      <label style="color:#fff;font-size:13px;"><input type="checkbox" id="incDone" checked /> Inclure terminés</label>
+      <label style="color:#fff;font-size:13px;">Zoom
+        <select id="zoom">
+          <option value="60">Compact</option>
+          <option value="96" selected>Normal</option>
+          <option value="150">Large</option>
+        </select>
+      </label>
+      <button class="btn" id="refreshBtn" title="Recharge les tickets depuis JIRA (dernières échéances, statuts...)">Rafraîchir</button>
+      <div class="menu">
+        <button class="btn" id="exportBtn">Exporter ▾</button>
+        <div class="menu-items" id="exportMenu">
+          <a href="#" data-fmt="pdf">📄 PDF</a>
+          <a href="#" data-fmt="pptx">📊 PowerPoint</a>
+          <a href="#" data-fmt="png">🖼️ Image (PNG)</a>
+          <a href="#" data-fmt="html">🌐 HTML</a>
+          <a href="#" data-fmt="eml">✉️ Email (.eml)</a>
+        </div>
+      </div>
+      <a class="btn ghost" href="/quality">Qualité</a>
+      <a class="btn ghost" href="/actualite">Actualité</a>
+      <a class="btn ghost" href="/">← Tableau de bord</a>
+    </div>
+  </header>
+
+  <main>
+    <p class="status" id="status"></p>
+
+    <div id="content">
+      <div class="empty" id="empty">
+        <p style="font-size:40px;margin:0;">🗺️</p>
+        <p>Aucune donnée chargée.<br/>Cliquez sur <b>« Rafraîchir »</b> pour construire la roadmap à partir des tickets JIRA.</p>
+      </div>
+
+      <div id="dash" style="display:none;">
+        <div class="kpis" id="kpis"></div>
+
+        <div class="toolbar">
+          <input type="text" id="search" placeholder="🔎 Filtrer (clé, sujet)..." />
+          <label>Trier :
+            <select id="sort">
+              <option value="start">par date de début</option>
+              <option value="end">par échéance</option>
+              <option value="progress">par avancement</option>
+              <option value="children">par nb d'enfants</option>
+            </select>
+          </label>
+          <div class="legend">
+            <span><i class="lg-box" style="background:var(--todo)"></i> À faire</span>
+            <span><i class="lg-box" style="background:var(--orange)"></i> En cours</span>
+            <span><i class="lg-box" style="background:var(--green)"></i> Terminé</span>
+            <span><i class="lg-box" style="background:var(--red)"></i> En retard</span>
+            <span><i class="lg-today"></i> aujourd'hui</span>
+          </div>
+        </div>
+
+        <div class="rm-wrap" id="rmWrap">
+          <div class="rm-chart" id="rmChart"></div>
+        </div>
+        <p class="hint">Chaque barre va de la <b>création</b> à l'<b>échéance</b> (ou à la résolution / aujourd'hui si aucune échéance).
+           Cliquez sur ▸ pour déplier les enfants d'un épic, sur une barre pour ouvrir le ticket dans JIRA.</p>
+      </div>
+    </div>
+  </main>
+
+  <div id="tip"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let DATA = null;
+let winStart = 0, winEnd = 1;
+let monthStarts = [];        // 1er jour de chaque colonne de mois
+const expanded = new Set();
+
+function setStatus(t, spin){ $('#status').innerHTML = (spin?'<span class="spinner"></span> ':'')+(t||''); }
+
+async function refresh(opts){
+  const reload = !!(opts && opts.reload);
+  const btn = $('#refreshBtn'); btn.disabled = true;
+  setStatus(reload ? 'Extraction JIRA en cours (dernières modifications)...' : 'Construction de la roadmap...', true);
+  const inc = $('#incDone').checked ? 1 : 0;
+  try {
+    const url = `/api/roadmap?include_done=${inc}&reload=${reload?1:0}`;
+    const j = await (await fetch(url)).json();
+    if(!j.ok){
+      setStatus('⚠️ ' + (j.error||'Erreur') + ' — générez d\'abord un rapport sur le tableau de bord.');
+      btn.disabled=false; return;
+    }
+    DATA = j.data; draw();
+    const src = DATA.source_generated_at ? ' · données du ' + DATA.source_generated_at : '';
+    $('#genAt').textContent = 'Roadmap générée le ' + DATA.generated_at + src;
+    setStatus('');
+  } catch(e){ setStatus('⚠️ ' + e); }
+  btn.disabled=false;
+}
+
+function statusColor(cat, overdue){
+  if(overdue) return 'var(--red)';
+  if(cat==='Done') return 'var(--green)';
+  if(cat==='In Progress') return 'var(--orange)';
+  return 'var(--todo)';
+}
+function statusLabel(cat){
+  return cat==='Done' ? 'Terminé' : cat==='In Progress' ? 'En cours' : 'À faire';
+}
+// Position en % calee sur les colonnes de mois (largeur egale) pour un
+// alignement exact avec l'en-tete, sans derive jour par jour.
+function pct(dateStr){
+  const n = monthStarts.length;
+  if(!n) return 0;
+  const d = new Date(dateStr);
+  if(d <= monthStarts[0]) return 0;
+  for(let i=0;i<n;i++){
+    const start = monthStarts[i];
+    const end = (i+1<n) ? monthStarts[i+1] : winEnd;
+    if(d < end){
+      const frac = (d - start) / (end - start);
+      return (i + frac) / n * 100;
+    }
+  }
+  return 100;
+}
+function fmtDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'});
+}
+function esc(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function barHtml(n, isEpic){
+  const l = Math.max(0, pct(n.start));
+  let w = pct(n.end) - pct(n.start);
+  if(w < 0.4) w = 0.4;
+  const color = statusColor(n.status_category, n.overdue);
+  const cls = ['rm-bar'];
+  if(isEpic) cls.push('epic');
+  if(n.ongoing) cls.push('ongoing');
+  if(n.overdue) cls.push('overdue');
+  const style = `left:${l}%;width:${w}%;--c:${color}`;
+  const tip = encodeURIComponent(JSON.stringify({
+    key:n.key, summary:n.summary, cat:n.status_category, status:n.status,
+    assignee:n.assignee, start:n.start, end:n.end, due:n.due,
+    ongoing:n.ongoing, overdue:n.overdue, progress:isEpic?n.progress:null,
+    ct:isEpic?n.child_total:null, cd:isEpic?n.child_done:null
+  }));
+  let inner = '';
+  if(isEpic){
+    const p = Math.round((n.progress||0)*100);
+    inner = `<i style="width:${p}%"></i><span class="rm-cap">${esc(n.key)} · ${p}%</span>`;
+  } else if(w > 8){
+    inner = `<span class="rm-cap">${esc(n.key)}</span>`;
+  }
+  // Libellé à droite de la barre si la barre est trop courte pour contenir du texte
+  const outside = (!isEpic && w <= 8)
+    ? `<span class="rm-out" style="left:${Math.min(l+w, 99)}%">${esc(n.key)}</span>` : '';
+  return `<a class="${cls.join(' ')}" style="${style}" href="${n.url}" target="_blank"
+             data-tip="${tip}" onclick="event.stopPropagation()">${inner}</a>${outside}`;
+}
+
+function laneLabel(n, isEpic){
+  const cat = statusLabel(n.status_category);
+  const meta = isEpic
+    ? `${n.child_done}/${n.child_total} terminés · échéance ${fmtDate(n.due)}`
+    : `${cat}${n.assignee? ' · '+esc(n.assignee):''} · échéance ${fmtDate(n.due)}`;
+  const tgl = isEpic && n.child_total>0
+    ? `<span class="rm-toggle" data-epic="${n.key}">${expanded.has(n.key)?'▾':'▸'}</span>`
+    : `<span class="rm-toggle leaf">•</span>`;
+  return `${tgl}<span class="tw">
+      <a class="key" href="${n.url}" target="_blank" onclick="event.stopPropagation()">${esc(n.key)}</a>
+      <span class="sm" title="${esc(n.summary)}">${esc(n.summary)}</span>
+      <span class="meta">${meta}</span>
+    </span>`;
+}
+
+function rowHtml(n, isEpic, child){
+  return `<div class="rm-row${child?' child':''}"${isEpic&&n.child_total>0?` data-epicrow="${n.key}"`:''}>
+      <div class="rm-label">${laneLabel(n, isEpic)}</div>
+      <div class="rm-track">${barHtml(n, isEpic)}</div>
+    </div>`;
+}
+
+function sortLanes(lanes){
+  const key = $('#sort').value;
+  const arr = lanes.slice();
+  if(key==='start') arr.sort((a,b)=> new Date(a.start)-new Date(b.start));
+  else if(key==='end') arr.sort((a,b)=> new Date(a.end)-new Date(b.end));
+  else if(key==='progress') arr.sort((a,b)=> (b.progress||0)-(a.progress||0));
+  else if(key==='children') arr.sort((a,b)=> (b.child_total||0)-(a.child_total||0));
+  return arr;
+}
+
+function draw(){
+  $('#empty').style.display='none';
+  $('#dash').style.display='';
+  winStart = new Date(DATA.window.start);
+  winEnd = new Date(DATA.window.end);
+  monthStarts = DATA.months.map(m => new Date(m.iso));
+  document.documentElement.style.setProperty('--mw', $('#zoom').value + 'px');
+
+  // KPIs
+  const c = DATA.counts;
+  $('#kpis').innerHTML = [
+    ['epics', c.epics, 'Épics'],
+    ['todo', c.todo, 'À faire', 'todo'],
+    ['orange', c.in_progress, 'En cours', 'orange'],
+    ['green', c.done, 'Terminés', 'green'],
+    ['red', c.overdue, 'En retard', 'red'],
+    ['nd', c.no_date, 'Sans échéance'],
+  ].map(k => `<div class="kpi ${k[3]||''}"><div class="v">${k[1]}</div><div class="l">${k[2]}</div></div>`).join('');
+
+  const q = ($('#search').value||'').toLowerCase().trim();
+  const match = n => !q || (n.key+' '+n.summary).toLowerCase().includes(q);
+
+  // En-tête mois
+  const cols = DATA.months.length;
+  document.documentElement.style.setProperty('--cols', cols);
+  const monthsHtml = DATA.months.map(m =>
+     `<div class="rm-mo${m.q===1?' q1':''}">${m.label}</div>`).join('');
+
+  // Lignes épics (+ enfants dépliés)
+  let rows = '';
+  const lanes = sortLanes(DATA.lanes).filter(match);
+  if(lanes.length){
+    rows += `<div class="rm-row"><div class="rm-group">📦 Épics (${lanes.length})</div><div class="rm-track"></div></div>`;
+    for(const e of lanes){
+      rows += rowHtml(e, true, false);
+      if(expanded.has(e.key)){
+        for(const ch of e.children){ rows += rowHtml(ch, false, true); }
+      }
+    }
+  }
+  // Tickets hors épic (planifiés)
+  const solo = DATA.standalone.filter(match);
+  if(solo.length){
+    rows += `<div class="rm-row"><div class="rm-group">📄 Hors épic — planifiés (${solo.length})</div><div class="rm-track"></div></div>`;
+    for(const s of solo){ rows += rowHtml(s, false, false); }
+  }
+  if(!lanes.length && !solo.length){
+    rows = `<div class="rm-row"><div class="rm-label" style="width:auto;flex:1">Aucun élément à afficher pour ce filtre.</div></div>`;
+  }
+
+  const todayLeft = pct(DATA.today);
+  const overlay = `<div class="rm-overlay"><div class="rm-today" style="left:${todayLeft}%"></div></div>`;
+
+  $('#rmChart').innerHTML =
+    `<div class="rm-head"><div class="rm-corner">Épic / Ticket</div><div class="rm-months">${monthsHtml}</div></div>
+     <div class="rm-body">${overlay}${rows}</div>`;
+
+  // Interactions déplier/replier
+  $('#rmChart').querySelectorAll('.rm-toggle[data-epic]').forEach(t => {
+    t.addEventListener('click', ev => {
+      ev.stopPropagation();
+      const k = t.getAttribute('data-epic');
+      if(expanded.has(k)) expanded.delete(k); else expanded.add(k);
+      draw();
+    });
+  });
+  $('#rmChart').querySelectorAll('.rm-row[data-epicrow]').forEach(r => {
+    r.addEventListener('click', () => {
+      const k = r.getAttribute('data-epicrow');
+      if(expanded.has(k)) expanded.delete(k); else expanded.add(k);
+      draw();
+    });
+  });
+
+  // Centrer la vue sur "aujourd'hui" (au premier rendu)
+  if(!draw._scrolled){
+    const wrap = $('#rmWrap');
+    const trackW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mw')) * cols;
+    const lw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--lw'));
+    wrap.scrollLeft = Math.max(0, lw + todayLeft/100*trackW - wrap.clientWidth/2);
+    draw._scrolled = true;
+  }
+  attachTips();
+}
+
+/* Tooltip au survol des barres */
+function attachTips(){
+  const tip = $('#tip');
+  $('#rmChart').querySelectorAll('.rm-bar').forEach(b => {
+    b.addEventListener('mousemove', ev => {
+      const d = JSON.parse(decodeURIComponent(b.getAttribute('data-tip')));
+      const col = statusColor(d.cat, d.overdue);
+      let html = `<b>${esc(d.key)}</b> — ${esc(d.summary)}<br/>`;
+      html += `<span class="tt-st" style="background:${col}">${statusLabel(d.cat)}${d.overdue?' · en retard':''}</span><br/>`;
+      if(d.progress!=null) html += `Avancement : <b>${Math.round(d.progress*100)}%</b> (${d.cd}/${d.ct} enfants terminés)<br/>`;
+      if(d.assignee) html += `Assigné : ${esc(d.assignee)}<br/>`;
+      html += `Du ${fmtDate(d.start)} au ${fmtDate(d.end)}${d.ongoing?' (en cours)':''}<br/>`;
+      html += d.due ? `Échéance : ${fmtDate(d.due)}` : 'Aucune échéance définie';
+      tip.innerHTML = html;
+      tip.style.display='block';
+      let x = ev.clientX + 14, y = ev.clientY + 14;
+      if(x + tip.offsetWidth > innerWidth) x = ev.clientX - tip.offsetWidth - 14;
+      if(y + tip.offsetHeight > innerHeight) y = ev.clientY - tip.offsetHeight - 14;
+      tip.style.left = x+'px'; tip.style.top = y+'px';
+    });
+    b.addEventListener('mouseleave', () => { tip.style.display='none'; });
+  });
+}
+
+$('#incDone').addEventListener('change', () => refresh({reload:false}));
+$('#zoom').addEventListener('change', () => { draw._scrolled=false; draw(); });
+$('#sort').addEventListener('change', draw);
+$('#search').addEventListener('input', draw);
+$('#refreshBtn').addEventListener('click', () => refresh({reload:true}));
+
+// menu export
+$('#exportBtn').addEventListener('click', e => { e.stopPropagation(); $('#exportMenu').classList.toggle('open'); });
+document.addEventListener('click', () => $('#exportMenu').classList.remove('open'));
+$('#exportMenu').addEventListener('click', e => {
+  const a = e.target.closest('a[data-fmt]'); if(!a) return;
+  e.preventDefault();
+  const params = new URLSearchParams();
+  params.set('include_done', $('#incDone').checked ? 1 : 0);
+  const q = ($('#search').value||'').trim();
+  if(q) params.set('q', q);
+  window.location = `/export/roadmap/${a.dataset.fmt}?${params.toString()}`;
+  $('#exportMenu').classList.remove('open');
+});
+
+refresh({reload:false});
+</script>
+</body>
+</html>
