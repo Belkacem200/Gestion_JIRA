@@ -1,16 +1,85 @@
-# BACNSO — Rapport d'avancement automatisé
+# BACNSO — Suivi & reporting d'avancement (JIRA + tableaux de suivi)
 
-Pipeline Python qui extrait tes données de **JIRA** et de **Microsoft 365 (Outlook + synthèses de réunion Copilot)**, réalise une **analyse intelligente** (au-delà du simple statut des tickets), et génère **3 livrables** prêts pour la hiérarchie :
+Application web locale (Flask) qui consolide **JIRA**, les **tableaux de suivi** (BAC‑NSO Development / Reconcile) et les **fiches projet PowerPoint** pour produire, en un clic, un **reporting hebdomadaire** prêt à envoyer à la hiérarchie, ainsi que des vues de pilotage (roadmap, qualité des tickets, fil d'actualité).
 
-- 📄 **Note de synthèse Markdown** (`out/rapport.md`)
-- 📊 **Trame PowerPoint** (`out/rapport.pptx`)
-- 📧 **Email prêt à envoyer** (`out/rapport.eml`, ouvrable dans Outlook)
-
-> 🔒 Tout tourne en local. Les appels vont directement sur `bouyguestelecom.atlassian.net` et `graph.microsoft.com`. Aucune donnée ne transite ailleurs. Les secrets restent dans `.env` (git-ignoré).
+> 🔒 Tout tourne en local. Les appels vont directement sur `bouyguestelecom.atlassian.net`. Aucune donnée ne transite ailleurs. Les secrets restent dans `.env` (git‑ignoré), les données importées dans `data/planning/` (git‑ignoré).
 
 ---
 
-## 1. Installation
+## 🚀 Lancement rapide
+
+Script de démarrage : **`c:\Users\bkaid\bacnso-report\start-web.ps1`**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "c:\Users\bkaid\bacnso-report\start-web.ps1"
+```
+
+ou, depuis le dossier du projet :
+
+```powershell
+cd c:\Users\bkaid\bacnso-report
+.\start-web.ps1
+```
+
+ou encore : **clic droit sur `start-web.ps1` → « Exécuter avec PowerShell »**.
+
+Le script : crée le venv + installe les dépendances au 1er lancement, **libère le port 5000** si besoin, ouvre le navigateur sur **http://127.0.0.1:5000** et démarre le serveur (`Ctrl+C` pour arrêter).
+
+Lancement manuel équivalent :
+
+```powershell
+& .\.venv\Scripts\python.exe webapp.py
+```
+
+---
+
+## 🧭 Les pages de l'application
+
+Toutes les pages partagent une **barre de navigation commune** (`templates/_nav.html`).
+
+| Page | URL | Rôle |
+|---|---|---|
+| **Tableau de bord** | `/` | Génération du rapport JIRA : KPI, synthèse, roadmap, risques, charge. Livrables Markdown / PPTX / Email. |
+| **Planning** | `/planning` | Import des tableaux de suivi + fiches PowerPoint ; 2 roadmaps (développements en Gantt, réconciliations en pipeline) consolidées avec JIRA. |
+| **Reporting** | `/reporting` | Communication hebdomadaire prête à envoyer (aperçu + export). |
+| **Roadmap JIRA** | `/roadmap` | Frise Gantt automatique construite depuis les tickets JIRA. |
+| **Qualité** | `/quality` | 15 contrôles d'hygiène des tickets (sans échéance, sans responsable, doublons, en retard…). |
+| **Actualité** | `/actualite` | Fil des commentaires / changements / créations de tickets. |
+
+---
+
+## 📥 Planning : imports pris en charge
+
+Sur la page **Planning**, glisser‑déposer (multi‑fichiers) :
+
+- **Tableaux de suivi** `BAC‑NSO Development` / `Reconcile` au format **`.html`** ou **`.xlsx`** → alimentent les roadmaps et le reporting.
+- **Fiches projet PowerPoint** `.pptx` (modèle « Suivi d'activité NSO » → *Fiche projet individuelle*, 1 par projet) → **affinent** le reporting avec le détail qualitatif : objectif, réalisé, **risque / blocage**, **décision attendue**, **prochaine étape**, MEP, responsables.
+
+Les fiches sont **fusionnées par projet** (le dépôt le plus récent remplace la fiche d'un projet, les autres sont conservées). Les tickets JIRA **abandonnés** ou au statut **« créé »** sont automatiquement exclus des roadmaps et du reporting.
+
+Persistance : `data/planning/{development,reconciliation,fiches}.json` (survit aux redémarrages, git‑ignoré).
+
+---
+
+## 📧 Reporting hebdomadaire
+
+Page **Reporting** — synthèse à deux volets (**Développement de services** / **Réconciliation UC**) :
+
+- **Fenêtre d'analyse** : les **2 dernières semaines complètes + la semaine en cours**, jusqu'au **jour de génération**.
+- Tableaux d'avancement **par projet** (barres de progression) + **contributeurs** par équipe.
+- **Points d'attention** (bloqués / à risque) enrichis par les fiches (risque + prochaine étape).
+- Section **Suivi détaillé des projets** (points clés issus des fiches PowerPoint).
+- **Roadmap des sujets en cours de réalisation** (barre d'avancement globale par équipe).
+
+Export / envoi :
+
+- **Copier (coller dans un email)** : copie le rapport **mis en forme** → `Ctrl+V` direct dans un nouveau mail Outlook (recommandé).
+- **Télécharger HTML** : fichier autonome.
+- **`.eml`** : brouillon Outlook (document HTML complet, `charset` déclaré, entités ASCII → rendu fiable dans Outlook).
+
+---
+
+## 🛠️ Installation
 
 ```powershell
 cd c:\Users\bkaid\bacnso-report
@@ -19,111 +88,75 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## 2. Test immédiat (sans identifiants)
+> Derrière un proxy d'entreprise avec inspection SSL, ajouter :
+> `pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt`
 
-Pour vérifier que tout fonctionne avec un jeu de données synthétique :
+## ⚙️ Configuration (`.env`)
 
 ```powershell
-python main.py --demo
+Copy-Item .env.example .env   # puis éditer .env
 ```
 
-→ Génère `out/rapport.md`, `out/rapport.pptx`, `out/rapport.eml`.
+**JIRA (obligatoire)** — créer un token sur <https://id.atlassian.com/manage-profile/security/api-tokens> :
 
-## 3. Configuration réelle
+- `JIRA_EMAIL` = email Atlassian
+- `JIRA_API_TOKEN` = token créé
+- `JIRA_JQL` = requête (ex. `project = BACNSO ORDER BY created DESC`)
+- `REPORT_TITLE`, `REPORT_AUTHOR` = titre / auteur du reporting
 
-```powershell
-Copy-Item .env.example .env
-```
+L'API JIRA Cloud utilise `/rest/api/3/search/jql` (pagination `nextPageToken`) et matche les états sur `statusCategory.key` (`new` / `indeterminate` / `done`).
 
-Puis édite `.env` :
+**Microsoft Graph (optionnel, mails/synthèses Copilot)** — souvent **bloqué par le tenant** ; l'app fonctionne parfaitement en **JIRA seul**.
 
-### a) JIRA (obligatoire)
-1. Va sur https://id.atlassian.com/manage-profile/security/api-tokens → **Create API token**.
-2. Renseigne dans `.env` :
-   - `JIRA_EMAIL` = ton email Atlassian
-   - `JIRA_API_TOKEN` = le token créé
-   - `JIRA_JQL` = la requête (par défaut : `project = BACNSO ORDER BY created DESC`)
+---
 
-### b) Microsoft Graph — mails + synthèses Copilot (optionnel)
-Nécessite une **App registration** Entra ID (Azure AD). Demande à ton IT si tu ne peux pas en créer :
-1. Portail Azure → **Entra ID → App registrations → New registration**.
-2. Type de compte : ce tenant uniquement. Note le **Application (client) ID** et le **Directory (tenant) ID**.
-3. **Authentication** → Add platform → **Mobile & desktop** → coche *"Allow public client flows"* (device code).
-4. **API permissions** → Microsoft Graph → **Delegated** : `Mail.Read`, `Files.Read.All`, `Sites.Read.All`, `User.Read` → *Grant admin consent*.
-5. Renseigne `GRAPH_CLIENT_ID` et `GRAPH_TENANT_ID` dans `.env`.
-
-Au 1er lancement, une **authentification par device code** s'affiche (URL + code à saisir dans le navigateur).
-
-## 4. Lancement
+## 🖥️ Pipeline en ligne de commande (optionnel)
 
 ```powershell
-python main.py             # JIRA + Graph (si configuré)
+python main.py --demo      # jeu de données synthétique (sans identifiants)
 python main.py --no-graph  # JIRA seul
-python main.py --demo      # données synthétiques
+python main.py             # JIRA (+ Graph si configuré)
 ```
 
-## 5. Interface web (recommandé)
-
-Un tableau de bord pour **générer et rafraîchir les rapports en un clic**, visualiser
-les KPI / la roadmap / les risques en direct, et télécharger les 3 formats.
-
-```powershell
-.\start-web.ps1
-```
-ou :
-```powershell
-python webapp.py
-```
-Puis ouvrir **http://127.0.0.1:5000**.
-
-- Bouton **« Générer / Rafraîchir »** : relance l'extraction JIRA + analyse.
-- Sélecteur **Périmètre** (3 / 6 / 8 / 12 / 24 mois).
-- Case **Auto (5 min)** : rafraîchissement automatique.
-- Onglets **Roadmap** : 🚧 En cours (échéances + retards) / 🗓️ À venir.
-- Téléchargements **Markdown / PowerPoint / Email**.
-
-> L'interface tourne en **JIRA seul** par défaut (fiable, sans interaction).
-> L'option Emails/Réunions n'apparaît que si Graph est configuré (auth par code à faire en console via `python main.py`).
+Génère `out/rapport.md`, `out/rapport.pptx`, `out/rapport.eml`.
 
 ---
 
-## Ce que fait l'analyse (au-delà des statuts)
-
-| Signal | Ce qu'il détecte |
-|---|---|
-| **Avancement pondéré** | % par tickets **et** par story points |
-| **Momentum** | créés vs résolus sur la période → dynamique positive / sous tension |
-| **Staleness** | tickets ouverts sans MAJ depuis ≥ 14 j (en sommeil) |
-| **Glissement de dates** | échéances dépassées ou proches (≤ 7 j) |
-| **Churn de statut** | allers-retours de statut (≥ 4) = instabilité |
-| **Blocages** | flag *Impediment* + mots-clés (bloqué, attente, dépendance…) |
-| **Charge** | répartition par personne, détection de surcharge |
-| **Sujets chauds** | croisement mails + réunions ↔ tickets pour remonter les vrais points chauds |
-
-Chaque risque est **noté** (élevé / moyen / faible) et priorisé, avec un motif explicite.
-
----
-
-## Structure
+## 📁 Structure du projet
 
 ```
 bacnso-report/
-├── main.py                  # orchestrateur CLI
+├── webapp.py                 # serveur Flask (toutes les routes / API)
+├── main.py                   # pipeline CLI (rapport md/pptx/eml)
+├── start-web.ps1             # script de lancement de l'interface web
 ├── requirements.txt
-├── .env.example             # modèle de config (copier en .env)
+├── .env                      # secrets (git-ignoré)
 ├── src/
-│   ├── config.py            # chargement config
-│   ├── models.py            # modèles normalisés (Issue, Mail, Meeting)
-│   ├── jira_client.py       # extraction JIRA REST API v3
-│   ├── graph_client.py      # Outlook + synthèses (MSAL device flow)
-│   ├── analysis.py          # moteur d'analyse multi-signaux
-│   ├── report_markdown.py   # génération Markdown
-│   ├── report_pptx.py       # génération PowerPoint
-│   └── report_email.py      # génération email HTML/.eml
-└── out/                     # livrables générés
+│   ├── config.py             # chargement de la configuration
+│   ├── models.py             # modèles normalisés (Issue…)
+│   ├── jira_client.py        # extraction JIRA (REST API v3)
+│   ├── graph_client.py       # Microsoft Graph (optionnel)
+│   ├── analysis.py           # analyse multi-signaux (dashboard)
+│   ├── serialize.py          # Analysis -> dict JSON
+│   ├── planning.py           # tableaux de suivi + fiches PPTX + roadmaps
+│   ├── planning_email.py     # reporting hebdomadaire (HTML + .eml)
+│   ├── quality.py            # 15 contrôles d'hygiène des tickets
+│   ├── quality_export.py     # exports qualité (PDF/PPTX/XLSX/HTML/CSV)
+│   ├── roadmap.py            # frise Gantt depuis JIRA
+│   ├── roadmap_export.py     # exports roadmap (PNG/PDF/PPTX/HTML/EML)
+│   ├── activity.py           # fil d'actualité (commentaires/changements)
+│   └── report_{markdown,pptx,email}.py
+├── templates/                # pages web (Jinja) + _nav.html (navbar commun)
+│   ├── index.html  planning.html  reporting.html
+│   ├── roadmap.html  quality.html  activity.html  _nav.html
+├── static/                   # brand.css (habillage Bouygues Telecom), favicon
+├── data/planning/            # tableaux + fiches importés (git-ignoré)
+└── out/                      # livrables générés (git-ignoré)
 ```
 
-## Notes / adaptations possibles
+---
 
-- Les `customfield_*` dans `jira_client.py` (Story Points, Sprint, Epic, Flagged) peuvent varier selon l'instance JIRA. Si un champ ne remonte pas, ajuste l'ID (visible via `GET /rest/api/3/field`).
-- Les synthèses Copilot sont recherchées comme fichiers OneDrive/SharePoint via l'API Graph Search. Selon ton tenant, l'emplacement/format peut nécessiter un ajustement de la requête dans `get_meeting_summaries`.
+## 🔐 Sécurité
+
+- `.env`, `data/planning/`, `data/raw/`, `out/`, `*.eml`, `*.pptx`, `.venv/` sont **git‑ignorés**.
+- Ne jamais committer de token. En cas d'exposition d'un token JIRA, le **révoquer** puis en régénérer un dans `.env`.
