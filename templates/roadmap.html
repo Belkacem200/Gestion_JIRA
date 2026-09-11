@@ -115,7 +115,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=4">
 </head>
 <body>
   <header>
@@ -126,9 +126,9 @@
           <span class="bt-word-t">telecom</span>
         </span>
         <svg class="bt-mark" viewBox="0 0 100 100" role="img" aria-label="Bouygues Telecom">
-          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#4fb4e6" transform="rotate(0 50 50)"/>
-          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#ee7c00" transform="rotate(120 50 50)"/>
-          <ellipse cx="50" cy="30" rx="30" ry="16" fill="#003a87" transform="rotate(240 50 50)"/>
+          <ellipse cx="50" cy="27" rx="26" ry="12.5" fill="#16a6de" transform="rotate(0 50 50)"/>
+          <ellipse cx="50" cy="27" rx="26" ry="12.5" fill="#ea5b0c" transform="rotate(120 50 50)"/>
+          <ellipse cx="50" cy="27" rx="26" ry="12.5" fill="#002f87" transform="rotate(240 50 50)"/>
         </svg>
       </a>
       <span class="head-div"></span>
@@ -137,6 +137,7 @@
         <div class="sub" id="genAt">—</div>
       </div>
     </div>
+    {% include '_nav.html' %}
     <div class="controls">
       <label style="color:#fff;font-size:13px;"><input type="checkbox" id="incDone" checked /> Inclure terminés</label>
       <label style="color:#fff;font-size:13px;">Zoom
@@ -157,9 +158,6 @@
           <a href="#" data-fmt="eml">✉️ Email (.eml)</a>
         </div>
       </div>
-      <a class="btn ghost" href="/quality">Qualité</a>
-      <a class="btn ghost" href="/actualite">Actualité</a>
-      <a class="btn ghost" href="/">← Tableau de bord</a>
     </div>
   </header>
 

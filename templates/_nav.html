@@ -1,0 +1,9 @@
+{# Barre de navigation commune à toutes les pages de la webapp #}
+<nav class="mainnav" aria-label="Navigation principale">
+  <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Tableau de bord</a>
+  <a href="/planning"{% if request.path == '/planning' %} class="active"{% endif %}>Planning</a>
+  <a href="/reporting"{% if request.path == '/reporting' %} class="active"{% endif %}>Reporting</a>
+  <a href="/roadmap"{% if request.path == '/roadmap' %} class="active"{% endif %}>Roadmap JIRA</a>
+  <a href="/quality"{% if request.path == '/quality' %} class="active"{% endif %}>Qualité</a>
+  <a href="/actualite"{% if request.path == '/actualite' %} class="active"{% endif %}>Actualité</a>
+</nav>

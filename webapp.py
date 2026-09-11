@@ -25,6 +25,8 @@ from src.roadmap import build_roadmap
 from src.activity import build_activity
 from src.serialize import analysis_to_dict
 from src import report_email, report_markdown, report_pptx
+from src import planning as planning_mod
+from src import planning_email
 
 app = Flask(__name__)
 
@@ -472,6 +474,165 @@ def download(fmt: str):
         return "Rapport non genere", 404
     return send_file(os.path.abspath(path), mimetype=mime,
                      as_attachment=True, download_name=name)
+
+
+# --------------------------------------------------------------------------- #
+# Planning : tableaux de suivi importés (développements + réconciliations)     #
+# --------------------------------------------------------------------------- #
+@app.route("/planning")
+def planning_page():
+    cfg = Config.from_env()
+    return render_template("planning.html", title=cfg.report_title)
+
+
+@app.route("/reporting")
+def reporting_page():
+    cfg = Config.from_env()
+    return render_template("reporting.html", title=cfg.report_title)
+
+
+@app.route("/api/planning")
+def api_planning():
+    """Roadmaps planning consolidées avec JIRA (enrichissement + conformité).
+
+    Charge automatiquement les tickets JIRA au premier affichage afin de croiser
+    chaque projet du planning avec son ticket (statut réel, responsable, contrôles
+    de conformité). reload=1 force une nouvelle extraction.
+    """
+    reload_jira = request.args.get("reload", "0") in ("1", "true", "True")
+    cfg = Config.from_env()
+    with _lock:
+        issues = _state["issues"]
+    jira_error = None
+    if (issues is None or reload_jira) and cfg.jira_enabled:
+        try:
+            issues = _reload_issues(cfg)
+        except Exception as exc:  # noqa: BLE001
+            traceback.print_exc()
+            jira_error = f"{exc}"
+    quality = build_quality(issues, include_done=True) if issues else None
+    data = planning_mod.build_all(issues, quality=quality)
+    data["jira_loaded"] = bool(issues)
+    data["jira_error"] = jira_error
+    return jsonify({"ok": True, "data": data})
+
+
+@app.route("/api/planning/upload", methods=["POST"])
+def api_planning_upload():
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"ok": False, "error": "Aucun fichier reçu."}), 400
+    imported, errors = [], []
+    for f in files:
+        try:
+            ds = planning_mod.parse_upload(f.filename, f.read())
+            if ds["type"] == "fiches":
+                if not ds["fiches"]:
+                    errors.append(f"{f.filename} : aucune fiche projet renseignée "
+                                  f"(modèle vierge ou champs non complétés ?).")
+                    continue
+                planning_mod.save_fiches(ds["fiches"], ds["source_name"])
+                imported.append({
+                    "type": "fiches", "source_name": ds["source_name"],
+                    "records": len(ds["fiches"]), "use_cases": len(ds["fiches"]),
+                })
+                continue
+            if not ds["records"]:
+                errors.append(f"{f.filename} : aucune ligne exploitable.")
+                continue
+            planning_mod.save_dataset(ds)
+            imported.append({
+                "type": ds["type"], "source_name": ds["source_name"],
+                "records": len(ds["records"]),
+                "use_cases": len(planning_mod.current_states(ds["records"])),
+            })
+        except Exception as exc:  # noqa: BLE001
+            traceback.print_exc()
+            errors.append(f"{f.filename} : {exc}")
+    return jsonify({"ok": len(imported) > 0, "imported": imported, "errors": errors})
+
+
+@app.route("/api/planning/clear/<dtype>", methods=["POST"])
+def api_planning_clear(dtype: str):
+    if dtype not in ("development", "reconciliation", "fiches"):
+        return jsonify({"ok": False, "error": "Type inconnu"}), 400
+    path = planning_mod._path(dtype)
+    if os.path.exists(path):
+        os.remove(path)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/planning/email")
+def api_planning_email():
+    cfg = Config.from_env()
+    dev = planning_mod.load_dataset("development")
+    recon = planning_mod.load_dataset("reconciliation")
+    if not (dev or recon):
+        return jsonify({"ok": False, "error": "Importez d'abord un tableau de suivi."})
+    with _lock:
+        issues = _state["issues"]
+    if issues is None and cfg.jira_enabled:
+        try:
+            issues = _reload_issues(cfg)
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+    quality = build_quality(issues, include_done=True) if issues else None
+    html = planning_email.build_html(dev, recon, cfg.report_title, cfg.report_author,
+                                     quality=quality, issues=issues)
+    return jsonify({"ok": True, "html": html,
+                    "subject": planning_email.subject(dev, recon, cfg.report_title, issues=issues)})
+
+
+@app.route("/export/planning/email")
+def export_planning_email():
+    cfg = Config.from_env()
+    dev = planning_mod.load_dataset("development")
+    recon = planning_mod.load_dataset("reconciliation")
+    if not (dev or recon):
+        return "Importez d'abord un tableau de suivi.", 404
+    with _lock:
+        issues = _state["issues"]
+    if issues is None and cfg.jira_enabled:
+        try:
+            issues = _reload_issues(cfg)
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+    quality = build_quality(issues, include_done=True) if issues else None
+    os.makedirs(cfg.output_dir, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M")
+    path = os.path.join(cfg.output_dir, f"hebdo_{stamp}.eml")
+    planning_email.build(dev, recon, cfg.report_title, cfg.report_author, path,
+                         quality=quality, issues=issues)
+    return send_file(os.path.abspath(path), mimetype="message/rfc822",
+                     as_attachment=True,
+                     download_name=f"communication_hebdo_{stamp}.eml")
+
+
+@app.route("/export/planning/html")
+def export_planning_html():
+    cfg = Config.from_env()
+    dev = planning_mod.load_dataset("development")
+    recon = planning_mod.load_dataset("reconciliation")
+    if not (dev or recon):
+        return "Importez d'abord un tableau de suivi.", 404
+    with _lock:
+        issues = _state["issues"]
+    if issues is None and cfg.jira_enabled:
+        try:
+            issues = _reload_issues(cfg)
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+    quality = build_quality(issues, include_done=True) if issues else None
+    doc = planning_email.build_document(dev, recon, cfg.report_title, cfg.report_author,
+                                        quality=quality, issues=issues)
+    os.makedirs(cfg.output_dir, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M")
+    path = os.path.join(cfg.output_dir, f"reporting_{stamp}.html")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(doc)
+    return send_file(os.path.abspath(path), mimetype="text/html",
+                     as_attachment=True,
+                     download_name=f"reporting_hebdo_{stamp}.html")
 
 
 if __name__ == "__main__":

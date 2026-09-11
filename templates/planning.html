@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }} — Planning & Roadmaps</title>
+  <style>
+    :root {
+      --blue:#131c3a; --blue2:#0071bc; --bg:#f5f7fb; --card:#fff;
+      --red:#e13b34; --orange:#ef8a2b; --green:#1f9d6b; --grey:#6b7688; --line:#e7ecf3;
+      --todo:#5b7fb0; --p0:#e13b34; --p1:#ef8a2b; --p2:#5b7fb0;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:#1a2233; }
+    header {
+      background:linear-gradient(120deg,var(--blue),var(--blue2)); color:#fff;
+      padding:18px 28px; display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 2px 10px rgba(0,0,0,.15); position:sticky; top:0; z-index:30; gap:16px;
+    }
+    header h1 { margin:0; font-size:20px; font-weight:600; }
+    header .sub { font-size:12px; opacity:.85; margin-top:2px; }
+    .controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .btn { background:#fff; color:var(--blue2); font-weight:600; padding:9px 16px; cursor:pointer;
+      border:none; border-radius:8px; font-size:14px; transition:.15s; box-shadow:0 2px 6px rgba(0,0,0,.12); }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.2); }
+    .btn.ghost { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.5); box-shadow:none; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+    main { padding:22px 28px; max-width:1500px; margin:0 auto; }
+    a.navlink { color:#fff; text-decoration:none; font-size:13px; opacity:.9; }
+    a.navlink:hover { opacity:1; text-decoration:underline; }
+
+    .card { background:var(--card); border-radius:14px; padding:18px 20px; margin-bottom:20px;
+      box-shadow:0 1px 4px rgba(0,0,0,.06); border:1px solid var(--line); }
+    .card h2 { margin:0 0 14px; font-size:16px; color:var(--blue); }
+
+    /* -- Dropzone import -- */
+    .drop { border:2px dashed #c7d3e3; border-radius:12px; padding:22px; text-align:center;
+      color:var(--grey); background:#fbfcfe; transition:.15s; cursor:pointer; }
+    .drop.drag { border-color:var(--blue2); background:#eef5fc; color:var(--blue2); }
+    .drop b { color:var(--blue); }
+    .loaded { display:flex; gap:14px; flex-wrap:wrap; margin-top:14px; }
+    .ds { flex:1 1 300px; border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+      display:flex; justify-content:space-between; align-items:center; gap:10px; background:#fff; }
+    .ds.empty { color:var(--grey); font-style:italic; }
+    .ds .meta b { color:var(--blue); } .ds .meta span { color:var(--grey); font-size:12px; }
+    .ds .pill { font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; color:#fff; }
+    .ds .pill.dev { background:var(--blue2); } .ds .pill.recon { background:#2e8b57; }
+    .ds .pill.fiches { background:#7a4fd0; }
+    .link-clear { color:var(--red); font-size:12px; cursor:pointer; background:none; border:none; }
+
+    /* -- Tabs -- */
+    .tabs { display:flex; gap:6px; margin:6px 0 16px; border-bottom:2px solid var(--line); }
+    .tab { padding:9px 18px; cursor:pointer; font-size:14px; font-weight:600; color:var(--grey);
+      border-radius:10px 10px 0 0; }
+    .tab.active { color:var(--blue); background:#fff; box-shadow:inset 0 -3px 0 var(--blue2); }
+    .hidden { display:none; }
+
+    /* -- KPIs -- */
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-bottom:18px; }
+    .kpi { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 12px; text-align:center; }
+    .kpi .v { font-size:26px; font-weight:800; color:var(--blue); }
+    .kpi .l { font-size:11px; color:var(--grey); margin-top:3px; text-transform:uppercase; letter-spacing:.4px; }
+    .kpi.green .v{color:var(--green);} .kpi.blue .v{color:var(--blue2);} .kpi.red .v{color:var(--red);} .kpi.orange .v{color:var(--orange);}
+
+    .toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+    .toolbar input[type=text] { padding:9px 12px; border:1px solid var(--line); border-radius:10px; font-size:14px; min-width:220px; }
+    .toolbar label { font-size:13px; color:var(--grey); display:flex; align-items:center; gap:6px; }
+
+    /* -- Gantt -- */
+    .g-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:#fff; }
+    .gantt { --lw:300px; --mw:120px; min-width:max-content; font-size:13px; }
+    .g-head { display:flex; position:sticky; top:0; z-index:6; background:#f4f7fb; border-bottom:1px solid var(--line); }
+    .g-head .corner { width:var(--lw); flex:0 0 var(--lw); position:sticky; left:0; z-index:7;
+      background:#f4f7fb; padding:10px 14px; font-weight:700; color:var(--blue); border-right:1px solid var(--line); }
+    .g-month { width:var(--mw); flex:0 0 var(--mw); text-align:center; padding:8px 4px; font-size:12px;
+      color:var(--grey); border-left:1px solid var(--line); }
+    .g-month.q1 { background:#fbfcfe; } .g-month b{ color:var(--blue); display:block; font-size:12px; }
+    .lane-h { display:flex; align-items:center; gap:8px; padding:7px 14px; background:#eef2f8;
+      position:sticky; left:0; font-weight:700; color:var(--blue); border-top:1px solid var(--line); z-index:4; }
+    .prio { font-size:11px; font-weight:800; padding:2px 9px; border-radius:999px; color:#fff; }
+    .prio.P0{background:var(--p0);} .prio.P1{background:var(--p1);} .prio.P2{background:var(--p2);} .prio.x{background:var(--grey);}
+    .cbadge { font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; white-space:nowrap; }
+    .cbadge.ok { background:#d9f0e3; color:#1f6b48; } .cbadge.ko { background:#fadbd9; color:#a4231d; cursor:help; }
+    .g-row { display:flex; align-items:stretch; border-top:1px solid #f0f3f8; }
+    .g-row:hover { background:#f8fbff; }
+    .g-row .lbl { width:var(--lw); flex:0 0 var(--lw); position:sticky; left:0; background:inherit;
+      padding:8px 14px; border-right:1px solid var(--line); z-index:3; }
+    .g-row:hover .lbl { background:#f8fbff; }
+    .g-row .lbl .uc { font-weight:700; color:var(--blue); }
+    .g-row .lbl .sub { font-size:11px; color:var(--grey); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .g-row .lbl a { color:var(--blue2); text-decoration:none; font-weight:600; }
+    .track { position:relative; flex:0 0 auto; margin:7px 0; }
+    .gl { position:absolute; top:0; bottom:0; width:1px; background:#eef2f7; }
+    .bar { position:absolute; top:4px; height:26px; border-radius:7px; display:flex; align-items:center;
+      padding:0 8px; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; overflow:hidden;
+      box-shadow:0 1px 3px rgba(0,0,0,.15); cursor:default; }
+    .bar .fill { position:absolute; left:0; top:0; bottom:0; background:rgba(255,255,255,.28); border-radius:7px; }
+    .bar span { position:relative; z-index:1; }
+    .bar.done { background:var(--green); } .bar.in_progress { background:var(--blue2); } .bar.blocked { background:var(--red); }
+    .bar.ongoing { background:linear-gradient(90deg,var(--blue2),#7fb2df); }
+    .bar.overdue { outline:2px solid var(--red); outline-offset:1px; }
+    .today-line { position:absolute; top:0; bottom:0; width:2px; background:var(--red); z-index:5; }
+    .today-line.first::after { content:"aujourd'hui"; position:absolute; top:-15px; left:-24px; font-size:10px; font-weight:700; color:var(--red); white-space:nowrap; }
+
+    /* -- Reconciliation pipeline -- */
+    .pipe { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+    .phase { border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; }
+    .phase-h { padding:10px 14px; font-weight:700; color:#fff; display:flex; justify-content:space-between; align-items:center;
+      background:linear-gradient(120deg,#2e8b57,#3fa76b); }
+    .phase-h .n { background:rgba(255,255,255,.25); border-radius:999px; padding:1px 9px; font-size:12px; }
+    .phase-body { padding:10px; display:flex; flex-direction:column; gap:10px; }
+    .rc { border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+    .rc.blocked { border-left:4px solid var(--red); }
+    .rc .top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .rc .uc { font-weight:700; color:var(--blue); }
+    .rc .desc { font-size:12px; color:var(--grey); margin:4px 0 6px; }
+    .status { font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; }
+    .status.done { background:#d9f0e3; color:#1f6b48; } .status.in_progress { background:#dbeafe; color:#1e4b8f; } .status.blocked { background:#fadbd9; color:#a4231d; }
+    .rc .next { font-size:12px; color:var(--blue); margin-top:6px; } .rc .next b { color:var(--grey); font-weight:600; text-transform:uppercase; font-size:10px; }
+    .rc .owner { font-size:11px; color:var(--grey); margin-top:6px; }
+    .prog { height:7px; background:#eef4fb; border-radius:999px; overflow:hidden; margin-top:8px; }
+    .prog > i { display:block; height:100%; border-radius:999px; }
+
+    /* -- Fiches projet (PowerPoint) -- */
+    .fiches-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:14px; }
+    .fiche { border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; }
+    .fiche-h { padding:10px 14px; background:#f6f8fc; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .fiche-h .nm { font-weight:700; color:var(--blue); }
+    .fiche-h .nm a { color:var(--blue2); text-decoration:none; font-size:12px; font-weight:600; margin-left:6px; }
+    .fiche-b { padding:12px 14px; display:flex; flex-direction:column; gap:9px; }
+    .fiche-sub { font-size:11px; color:var(--grey); }
+    .fiche-f .k { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--grey); }
+    .fiche-f .v { font-size:13px; color:#25324a; white-space:pre-wrap; margin-top:1px; }
+    .fiche-f.hot .k { color:var(--red); }
+    .fiche-f.hot .v { font-weight:600; }
+    .etat-badge { font-size:11px; font-weight:700; padding:2px 10px; border-radius:999px; white-space:nowrap; }
+    .etat-badge.done{background:#d9f0e3;color:#1f6b48;} .etat-badge.in_progress{background:#dbeafe;color:#1e4b8f;} .etat-badge.blocked{background:#fadbd9;color:#a4231d;}
+
+    .empty-state { text-align:center; padding:44px 20px; color:var(--grey); }
+    .status-line { font-size:13px; margin:0 0 8px; min-height:18px; color:var(--grey); }
+    .spinner { display:inline-block; width:13px; height:13px; border:2px solid #ccc; border-top-color:var(--blue2);
+      border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* -- Tooltip -- */
+    #tip { position:fixed; z-index:100; background:#131c3a; color:#fff; padding:8px 11px; border-radius:8px;
+      font-size:12px; max-width:320px; pointer-events:none; opacity:0; transition:opacity .1s; box-shadow:0 4px 16px rgba(0,0,0,.3); }
+    #tip b { color:#7fc4f0; }
+
+    /* -- Modal -- */
+    .modal { position:fixed; inset:0; background:rgba(15,25,45,.55); z-index:200; display:none; align-items:flex-start; justify-content:center; padding:30px 16px; overflow:auto; }
+    .modal.show { display:flex; }
+    .modal-box { background:#fff; border-radius:14px; max-width:900px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); }
+    .modal-head h3 { margin:0; color:var(--blue); font-size:16px; }
+    .modal-head .x { cursor:pointer; font-size:22px; color:var(--grey); background:none; border:none; }
+    .modal-actions { display:flex; gap:10px; padding:12px 18px; border-top:1px solid var(--line); background:#fafbfd; }
+    .modal-body { padding:6px; max-height:70vh; overflow:auto; }
+    .btn.solid { background:var(--blue2); color:#fff; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=4">
+</head>
+<body>
+  <header>
+    <div class="head-left">
+      <a class="brand" href="/" aria-label="Bouygues Telecom — accueil">
+        <span class="bt-word">
+          <span class="bt-word-b">bouygues</span>
+          <span class="bt-word-t">telecom</span>
+        </span>
+        <svg class="bt-mark" viewBox="0 0 100 100" role="img" aria-label="Bouygues Telecom">
+          <ellipse cx="50" cy="27" rx="26" ry="12.5" fill="#16a6de" transform="rotate(0 50 50)"/>
+          <ellipse cx="50" cy="27" rx="26" ry="12.5" fill="#ea5b0c" transform="rotate(120 50 50)"/>
+          <ellipse cx="50" cy="27" rx="26" ry="12.5" fill="#002f87" transform="rotate(240 50 50)"/>
+        </svg>
+      </a>
+      <span class="head-div"></span>
+      <div class="head-title">
+        <h1>Planning &amp; Roadmaps</h1>
+        <div class="sub" id="genAt">Développements &amp; réconciliations</div>
+      </div>
+    </div>
+    {% include '_nav.html' %}
+    <div class="controls">
+      <button class="btn" id="importBtn">Importer un tableau</button>
+      <button class="btn ghost" id="emailBtn">Email hebdo</button>
+    </div>
+  </header>
+
+  <main>
+    <p class="status-line" id="status"></p>
+
+    <!-- Import -->
+    <div class="card">
+      <h2>Import des tableaux de suivi</h2>
+      <div class="drop" id="drop">
+        Glissez ici les tableaux <b>BAC-NSO Development</b> / <b>Reconcile</b> (<b>.html</b>, <b>.xlsx</b>)
+        et les <b>fiches projet PowerPoint</b> (<b>.pptx</b>), ou cliquez pour parcourir.
+        <input type="file" id="file" accept=".html,.htm,.xlsx,.pptx" multiple hidden />
+      </div>
+      <div class="loaded" id="loaded"></div>
+    </div>
+
+    <!-- Fiches projet (PowerPoint) -->
+    <div class="card" id="fichesCard" style="display:none">
+      <h2>Fiches projet <span style="font-weight:400;color:var(--grey);font-size:13px">— détail qualitatif importé des PowerPoint</span></h2>
+      <div id="fiches-body"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="dev">Développements</div>
+      <div class="tab" data-tab="recon">Réconciliations</div>
+    </div>
+
+    <section id="tab-dev">
+      <div id="dev-body"><div class="empty-state">Importez le tableau des développements pour afficher la roadmap.</div></div>
+    </section>
+
+    <section id="tab-recon" class="hidden">
+      <div id="recon-body"><div class="empty-state">Importez le tableau des réconciliations pour afficher le pipeline.</div></div>
+    </section>
+  </main>
+
+  <div id="tip"></div>
+
+  <!-- Modal email -->
+  <div class="modal" id="emailModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Communication hebdomadaire</h3>
+        <button class="x" id="emailClose">&times;</button>
+      </div>
+      <div class="modal-body" id="emailBody"></div>
+      <div class="modal-actions">
+        <button class="btn solid" id="emailDownload">Télécharger (.eml)</button>
+        <button class="btn" id="emailCopy">Copier le sujet</button>
+        <span id="emailSubject" style="align-self:center;color:var(--grey);font-size:12px"></span>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = s => document.querySelector(s);
+const PRIOS = { P0:'P0', P1:'P1', P2:'P2' };
+let PLAN = null;
+
+function setStatus(t, spin) { $('#status').innerHTML = (spin?'<span class="spinner"></span> ':'') + (t||''); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pctTxt(x){ return Math.round((x||0)*100)+'%'; }
+
+async function loadPlanning() {
+  setStatus('Chargement…', true);
+  try {
+    const r = await fetch('/api/planning');
+    const j = await r.json();
+    PLAN = j.ok ? j.data : null;
+    renderLoaded(); renderDev(); renderRecon(); renderFiches();
+    setStatus('');
+  } catch(e){ setStatus('Erreur de chargement : '+e); }
+}
+
+function renderLoaded() {
+  const box = $('#loaded');
+  const dev = PLAN && PLAN.dev, recon = PLAN && PLAN.recon;
+  const card = (type, cls, label, data) => {
+    if (!data) return `<div class="ds empty"><span>${label} : non importé</span></div>`;
+    const n = (data.counts && data.counts.total) || 0;
+    return `<div class="ds"><div class="meta"><span class="pill ${cls}">${label}</span>
+      <div style="margin-top:6px"><b>${esc(data.source_name||'—')}</b><br>
+      <span>${n} cas d'usage · importé ${esc(data.imported_at||'')}</span></div></div>
+      <button class="link-clear" data-clear="${type}">vider</button></div>`;
+  };
+  const nf = (PLAN && PLAN.fiches && PLAN.fiches.length) || 0;
+  const fichesPill = nf ? `<div class="ds"><div class="meta"><span class="pill fiches">Fiches projet</span>
+      <div style="margin-top:6px"><b>${nf} fiche${nf>1?'s':''} PowerPoint</b><br>
+      <span>détail qualitatif par projet</span></div></div>
+      <button class="link-clear" data-clear="fiches">vider</button></div>` : '';
+  box.innerHTML = card('development','dev','Développements', dev && !dev.empty ? dev : (PLAN&&PLAN.has_dev?{counts:{total:0}}:null))
+                + card('reconciliation','recon','Réconciliations', recon) + fichesPill;
+  box.querySelectorAll('[data-clear]').forEach(b => b.onclick = async () => {
+    if (!confirm('Retirer ce tableau ?')) return;
+    await fetch('/api/planning/clear/'+b.dataset.clear, {method:'POST'});
+    loadPlanning();
+  });
+}
+
+/* ---------- Roadmap Développements (Gantt) ---------- */
+let monthStarts = [], nMonths = 0, MW = 120;
+function buildMonthScale(dev) {
+  monthStarts = dev.months.map(m => new Date(m.iso + 'T00:00:00Z'));
+  monthStarts.push(new Date(dev.window.end + 'T00:00:00Z'));
+  nMonths = dev.months.length;
+}
+function pct(iso) {
+  if (!iso) return null;
+  const d = new Date(iso + 'T00:00:00Z');
+  if (d <= monthStarts[0]) return 0;
+  if (d >= monthStarts[nMonths]) return 100;
+  for (let i=0;i<nMonths;i++){
+    if (d >= monthStarts[i] && d < monthStarts[i+1]) {
+      const frac = (d - monthStarts[i]) / (monthStarts[i+1]-monthStarts[i]);
+      return (i+frac)/nMonths*100;
+    }
+  }
+  return 100;
+}
+
+function renderDev() {
+  const body = $('#dev-body');
+  const dev = PLAN && PLAN.dev;
+  if (!dev || dev.empty) {
+    body.innerHTML = '<div class="empty-state">Importez le tableau des développements (.html ou .xlsx) pour afficher la roadmap.</div>';
+    return;
+  }
+  buildMonthScale(dev);
+  const c = dev.counts;
+  const kpis = `<div class="kpis">
+    <div class="kpi"><div class="v">${c.total}</div><div class="l">Cas d'usage</div></div>
+    <div class="kpi green"><div class="v">${c.done}</div><div class="l">Terminés</div></div>
+    <div class="kpi blue"><div class="v">${c.in_progress}</div><div class="l">En cours</div></div>
+    <div class="kpi red"><div class="v">${c.blocked}</div><div class="l">Bloqués</div></div>
+    <div class="kpi orange"><div class="v">${c.overdue}</div><div class="l">En retard</div></div>
+    ${dev.conformity_available?`<div class="kpi ${c.non_conforme?'red':'green'}"><div class="v">${c.non_conforme}</div><div class="l">Non conformes JIRA</div></div>`:''}
+    <div class="kpi"><div class="v">${pctTxt(c.avg_progress)}</div><div class="l">Avancement moyen</div></div>
+  </div>`;
+
+  const trackW = nMonths*MW;
+  const q = ($('#devSearch') && $('#devSearch').value || '').toLowerCase();
+
+  let head = `<div class="g-head"><div class="corner">Cas d'usage</div>`;
+  dev.months.forEach(m => {
+    const [mm] = m.label.split(' ');
+    head += `<div class="g-month ${m.q===1?'q1':''}"><b>${mm}</b>${m.label.split(' ')[1]}</div>`;
+  });
+  head += `</div>`;
+
+  let rows = '';
+  const todayPct = pct(dev.today);
+  let firstRow = true;
+  dev.lanes.forEach(lane => {
+    const items = lane.items.filter(it => !q || (it.use_case_display+' '+(it.owner||'')+' '+(it.jira_key||'')).toLowerCase().includes(q));
+    if (!items.length) return;
+    const pcls = ['P0','P1','P2'].includes(lane.priority) ? lane.priority : 'x';
+    rows += `<div class="lane-h"><span class="prio ${pcls}">${esc(lane.priority)}</span> ${items.length} cas d'usage</div>`;
+    items.forEach(it => {
+      const l = pct(it.start), r = pct(it.end);
+      const left = l/100*trackW, w = Math.max(14, (r-l)/100*trackW);
+      const jira = it.jira_key ? `<a href="${esc(it.jira_url)}" target="_blank">${esc(it.jira_key)}</a>` : '';
+      const jstat = it.jira_status ? `· ${esc(it.jira_status)}` : '';
+      const conf = it.conformity ? (it.conformity.count===0
+        ? `<span class="cbadge ok" title="Ticket JIRA conforme">✓ conforme</span>`
+        : `<span class="cbadge ko" title="${esc(it.conformity.flags.join(', '))}">⚠ ${it.conformity.count} défaut${it.conformity.count>1?'s':''}</span>`) : '';
+      const cls = it.status + (it.ongoing && it.status==='in_progress' ? ' ongoing':'') + (it.overdue?' overdue':'');
+      const tcls = 'today-line' + (firstRow ? ' first' : ''); firstRow = false;
+      const tip = `${esc(it.use_case_display)} — ${esc(it.description||'')}\n${it.priority} · ${pctTxt(it.progress)} · ${it.status_raw||it.status}` +
+        (it.target?`\nÉchéance : ${it.target}`:'') + (it.owner?`\nResp. : ${esc(it.owner)}`:'') +
+        (it.jira_status?`\nJIRA : ${esc(it.jira_key)} (${esc(it.jira_status)})`:'') +
+        (it.conformity&&it.conformity.count?`\nConformité : ${it.conformity.count} défaut(s) — ${it.conformity.flags.join(', ')}`:(it.conformity?`\nConformité : OK`:'')) +
+        (it.comment?`\n« ${esc(it.comment).slice(0,160)} »`:'');
+      rows += `<div class="g-row">
+        <div class="lbl"><div class="uc">${esc(it.use_case_display)}</div>
+          <div class="sub"><span class="prio ${['P0','P1','P2'].includes(it.priority)?it.priority:'x'}">${esc(it.priority||'—')}</span>
+          ${jira} ${jstat} ${conf} · ${pctTxt(it.progress)}${it.owner?' · '+esc(it.owner):''}</div></div>
+        <div class="track" style="width:${trackW}px">
+          ${dev.months.map((m,i)=>`<div class="gl" style="left:${i/nMonths*trackW}px"></div>`).join('')}
+          ${todayPct!=null?`<div class="${tcls}" style="left:${todayPct/100*trackW}px"></div>`:''}
+          <div class="bar ${cls}" style="left:${left}px;width:${w}px" data-tip="${encodeURIComponent(tip)}">
+            <span class="fill" style="width:${Math.round((it.progress||0)*100)}%"></span>
+            <span>${pctTxt(it.progress)}</span>
+          </div>
+        </div></div>`;
+    });
+  });
+  if (!rows) rows = `<div class="empty-state">Aucun élément ne correspond à la recherche.</div>`;
+
+  body.innerHTML = kpis +
+    `<div class="toolbar"><input type="text" id="devSearch" placeholder="Rechercher un cas d'usage, responsable, ticket…" value="${esc(q)}">
+      <label>Source : ${esc(dev.source_name||'')} · maj ${esc(dev.imported_at||'')} · ${PLAN.jira_loaded?'conformité JIRA intégrée':'JIRA non chargé'}</label>
+      <a class="btn ghost" href="/export/planning/email" style="text-decoration:none;background:var(--blue2);color:#fff">Email hebdo (.eml)</a></div>
+    <div class="g-wrap"><div class="gantt" style="--mw:${MW}px">${head}${rows}</div></div>`;
+
+  const si = $('#devSearch');
+  if (si) { si.oninput = () => { const p=si.selectionStart; renderDev(); const n=$('#devSearch'); if(n){n.focus(); n.setSelectionRange(p,p);} }; }
+  bindTips();
+}
+
+/* ---------- Roadmap Réconciliations (pipeline) ---------- */
+function renderRecon() {
+  const body = $('#recon-body');
+  const rec = PLAN && PLAN.recon;
+  if (!rec) {
+    body.innerHTML = '<div class="empty-state">Importez le tableau des réconciliations (.html) pour afficher le pipeline.</div>';
+    return;
+  }
+  const c = rec.counts;
+  const kpis = `<div class="kpis">
+    <div class="kpi"><div class="v">${c.total}</div><div class="l">Chantiers</div></div>
+    <div class="kpi green"><div class="v">${c.done}</div><div class="l">Terminés</div></div>
+    <div class="kpi blue"><div class="v">${c.in_progress}</div><div class="l">En cours</div></div>
+    <div class="kpi red"><div class="v">${c.blocked}</div><div class="l">Bloqués</div></div>
+  </div>`;
+  const stcol = { done:'var(--green)', in_progress:'var(--blue2)', blocked:'var(--red)' };
+  const stlab = { done:'Terminé', in_progress:'En cours', blocked:'Bloqué' };
+  let cols = '';
+  rec.phases.forEach(ph => {
+    let cards = '';
+    ph.items.forEach(it => {
+      const prog = Math.round((it.progress||0)*100);
+      const pcls = ['P0','P1','P2'].includes(it.priority)?it.priority:'x';
+      cards += `<div class="rc ${it.status==='blocked'?'blocked':''}">
+        <div class="top"><span class="uc">${esc(it.use_case_display)}</span>
+          <span class="prio ${pcls}">${esc(it.priority||'—')}</span></div>
+        <div class="desc">${esc((it.description||'').slice(0,120))}</div>
+        <div class="top"><span class="status ${it.status}">${stlab[it.status]}</span>
+          <span style="font-size:11px;color:var(--grey)">${esc(it.owner||'')}</span></div>
+        ${it.target_text?`<div class="next"><b>Prochain jalon</b><br>${esc(it.target_text)}</div>`:''}
+        ${it.comment?`<div class="owner">« ${esc(it.comment.slice(0,160))} »</div>`:''}
+        ${prog>1?`<div class="prog"><i style="width:${prog}%;background:${stcol[it.status]}"></i></div>`:''}
+      </div>`;
+    });
+    cols += `<div class="phase"><div class="phase-h">${esc(ph.label)} <span class="n">${ph.count}</span></div>
+      <div class="phase-body">${cards}</div></div>`;
+  });
+  body.innerHTML = kpis + `<div class="toolbar"><label>Source : ${esc(rec.source_name||'')} · maj ${esc(rec.imported_at||'')}</label></div>
+    <div class="pipe">${cols}</div>`;
+}
+
+/* ---------- Fiches projet (PowerPoint) ---------- */
+function renderFiches() {
+  const cardEl = $('#fichesCard'), body = $('#fiches-body');
+  const fiches = (PLAN && PLAN.fiches) || [];
+  if (!fiches.length) { cardEl.style.display='none'; body.innerHTML=''; return; }
+  cardEl.style.display='';
+  const FIELDS = [
+    ['prochaine_etape','Prochaine étape', true],
+    ['risque','Risque / blocage', true],
+    ['decision','Décision attendue', true],
+    ['realise','Réalisé récemment', false],
+    ['objectif','Objectif & périmètre', false],
+    ['validation','Validation / tests', false],
+    ['preuves','Preuves', false],
+    ['mep','MEP / exploitabilité', false],
+  ];
+  const order = f => ({blocked:0, in_progress:1, done:2}[f.status] ?? 3);
+  body.innerHTML = '<div class="fiches-grid">' + fiches.slice().sort((a,b)=>order(a)-order(b)).map(f => {
+    const st = f.status || 'in_progress';
+    const jira = f.jira_key ? `<a href="${esc(f.jira_url)}" target="_blank">${esc(f.jira_key)}</a>` : '';
+    const sub = [f.referents?('Réf. : '+esc(f.referents)):'', f.maj?('MAJ '+esc(f.maj)):''].filter(Boolean).join(' · ');
+    const rows = FIELDS.filter(([k]) => (f[k]||'').trim()).map(([k,lab,hot]) =>
+      `<div class="fiche-f ${hot?'hot':''}"><div class="k">${lab}</div><div class="v">${esc(f[k])}</div></div>`).join('');
+    return `<div class="fiche"><div class="fiche-h">
+        <span class="nm">${esc(f.projet)} ${jira}</span>
+        <span class="etat-badge ${st}">${esc(f.etat||'—')}</span>
+      </div><div class="fiche-b">
+        ${sub?`<div class="fiche-sub">${sub}</div>`:''}
+        ${rows||'<div class="fiche-sub">Aucun détail renseigné.</div>'}
+      </div></div>`;
+  }).join('') + '</div>';
+}
+
+/* ---------- Tooltips ---------- */
+function bindTips() {
+  const tip = $('#tip');
+  document.querySelectorAll('.bar[data-tip]').forEach(b => {
+    b.onmousemove = e => { tip.textContent = decodeURIComponent(b.dataset.tip); tip.style.opacity=1;
+      tip.style.left = Math.min(e.clientX+14, window.innerWidth-330)+'px'; tip.style.top = (e.clientY+14)+'px'; };
+    b.onmouseleave = () => { tip.style.opacity=0; };
+  });
+}
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  $('#tab-dev').classList.toggle('hidden', t.dataset.tab!=='dev');
+  $('#tab-recon').classList.toggle('hidden', t.dataset.tab!=='recon');
+});
+
+/* ---------- Import ---------- */
+const drop = $('#drop'), fileInput = $('#file');
+$('#importBtn').onclick = () => fileInput.click();
+drop.onclick = () => fileInput.click();
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+drop.addEventListener('drop', e => uploadFiles(e.dataTransfer.files));
+fileInput.onchange = () => uploadFiles(fileInput.files);
+
+async function uploadFiles(files) {
+  if (!files || !files.length) return;
+  const fd = new FormData();
+  [...files].forEach(f => fd.append('files', f));
+  setStatus('Import de '+files.length+' fichier(s)…', true);
+  try {
+    const r = await fetch('/api/planning/upload', {method:'POST', body:fd});
+    const j = await r.json();
+    if (j.imported && j.imported.length) {
+      const LBL = {development:'Développements', reconciliation:'Réconciliations', fiches:'Fiches projet'};
+      const msg = j.imported.map(i => `${LBL[i.type]||i.type} : ${i.use_cases} ${i.type==='fiches'?'fiche(s)':"cas d'usage"}`).join(' · ');
+      setStatus('Importé — '+msg + (j.errors&&j.errors.length?(' · '+j.errors.join(' ; ')):''));
+    } else {
+      setStatus('Échec import : '+((j.errors||[]).join(' ; ')||j.error||'inconnu'));
+    }
+    fileInput.value=''; loadPlanning();
+  } catch(e){ setStatus('Erreur import : '+e); }
+}
+
+/* ---------- Email hebdo ---------- */
+$('#emailBtn').onclick = async () => {
+  setStatus('Génération de l\'email…', true);
+  try {
+    const r = await fetch('/api/planning/email');
+    const j = await r.json();
+    if (!j.ok) { setStatus(j.error||'Importez d\'abord un tableau.'); return; }
+    $('#emailBody').innerHTML = j.html;
+    $('#emailSubject').textContent = 'Sujet : '+j.subject;
+    $('#emailModal').classList.add('show'); setStatus('');
+  } catch(e){ setStatus('Erreur : '+e); }
+};
+$('#emailClose').onclick = () => $('#emailModal').classList.remove('show');
+$('#emailModal').onclick = e => { if (e.target===$('#emailModal')) $('#emailModal').classList.remove('show'); };
+$('#emailDownload').onclick = () => window.location = '/export/planning/email';
+$('#emailCopy').onclick = () => {
+  const s = $('#emailSubject').textContent.replace(/^Sujet : /,'');
+  navigator.clipboard.writeText(s); $('#emailCopy').textContent='Copié !'; setTimeout(()=>$('#emailCopy').textContent='Copier le sujet',1500);
+};
+document.addEventListener('keydown', e => { if (e.key==='Escape') $('#emailModal').classList.remove('show'); });
+
+loadPlanning();
+</script>
+</body>
+</html>

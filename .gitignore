@@ -15,3 +15,5 @@ venv/
 
 # Cache de donnees brutes
 data/raw/
+# Tableaux de suivi importes (donnees reelles de tickets)
+data/planning/

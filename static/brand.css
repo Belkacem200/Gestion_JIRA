@@ -83,6 +83,17 @@ header select, header input[type=text] {
 .btn.ghost { background:#fff; color:var(--bt-navy); border:1.5px solid var(--bt-line); box-shadow:none; }
 .btn.ghost:hover { background:#f4f7fb; border-color:#cdd8e8; transform:translateY(-1px); }
 
+/* --------------------------------------------------- Barre de navigation --- */
+/* Navbar commune (partial templates/_nav.html), incluse dans toutes les pages */
+header { flex-wrap:wrap; row-gap:10px; }
+.mainnav { display:flex; align-items:center; gap:3px; flex-wrap:wrap; flex:1 1 auto; justify-content:center; }
+.mainnav a {
+  font-size:13px; font-weight:600; color:#42506b; text-decoration:none; white-space:nowrap;
+  padding:7px 12px; border-radius:22px; line-height:1; border:1.5px solid transparent; transition:.14s;
+}
+.mainnav a:hover { background:#eef3f9; color:var(--bt-blue); }
+.mainnav a.active { background:var(--bt-blue); color:#fff; box-shadow:0 2px 10px rgba(0,113,188,.25); }
+
 /* ------------------------------------------------------ Cartes & titres ---- */
 .card { border:1px solid var(--bt-line); border-radius:20px; box-shadow:0 4px 20px rgba(17,34,64,.05); padding:22px 24px; }
 .card h2 {
